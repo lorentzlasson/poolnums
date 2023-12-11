@@ -16,34 +16,20 @@ defaultBallNumMax = 15
 
 generator = Random.int defaultBallNumMin defaultBallNumMax
 
-getRandomBall = \x ->
-    x
+getRandomBall = \num ->
+    num
     |> Random.seed
     |> generator
     |> .value
     |> Num.toStr
 
-utcToU32 = \utc ->
-    utc
-    |> Utc.toMillisSinceEpoch
-    |> Num.toU32
-
 main =
     n <- Utc.now
-        |> Task.map utcToU32
+        |> Task.map Utc.toMillisSinceEpoch
+        |> Task.map Num.toU32
         |> Task.await
-    x1 = n |> getRandomBall
 
-    n2 <- Utc.now
-        |> Task.map utcToU32
-        |> Task.await
-    x2 = n2 |> getRandomBall
-
-    n3 <- Utc.now
-        |> Task.map utcToU32
-        |> Task.await
-    x3 = n3 |> getRandomBall
-
-    [x1, x2, x3]
+    List.range { start: At 0, end: Before 3 }
+    |> List.map \i -> getRandomBall (n + i)
     |> Str.joinWith "\n"
     |> Stdout.line
