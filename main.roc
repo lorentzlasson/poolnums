@@ -12,45 +12,65 @@ app "hello"
     ]
     provides [main] to pf
 
-defaultBallCount = 3
-defaultBallNumMin = 1
-defaultBallNumMax = 15
+defaultTargetCount = 3
+
+ballNumbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
 
 main =
-    ballCount <- getBallCountFromArgs |> Task.await
-    seed <- getSeed |> Task.await
+    targetCount <- getTargetCountFromArgs |> Task.await
+    time <- getSeed |> Task.await
 
-    ballCount
-    |> getBallNumbers seed
+    state = time |> Random.seed
+
+    targetCount
+    |> selectRandomFromList ballNumbers [] state
+    |> format
     |> Stdout.line
 
-getBallCountFromArgs =
+getTargetCountFromArgs =
     Arg.list
-    |> Task.map getBallCount
+    |> Task.map getTargetCount
 
-getBallCount = \args ->
+getTargetCount = \args ->
     args
     |> List.get 1
     |> Result.try Str.toU32
-    |> Result.withDefault defaultBallCount
+    |> Result.withDefault defaultTargetCount
 
 getSeed =
     Utc.now
     |> Task.map Utc.toMillisSinceEpoch
     |> Task.map Num.toU32
 
-getBallNumbers = \ballCount, seed ->
-    List.range { start: At 0, end: Before ballCount }
-    |> List.map \i -> getRandomBall (seed + i)
+selectRandomFromList = \targetCount, available, selected, state ->
+    if List.len selected == Num.toNat targetCount then
+        selected
+    else
+        availableCount =
+            available
+            |> List.len
+            |> Num.toI32
+
+        # TODO: why always 7 as first number if generator 1 to 16?
+        # generator = Random.int 0 (availableCount)
+        generator = Random.int 0 (availableCount - 1)
+
+        generation = state |> generator
+
+        index = Num.toNat generation.value
+
+        ball =
+            available
+            |> List.get index
+            |> Result.withDefault -999
+
+        selected2 = selected |> List.append ball
+        available2 = available |> List.dropIf (\x -> x == ball)
+        state2 = generation.state
+
+        targetCount |> selectRandomFromList available2 selected2 state2
+
+format = \list ->
+    list
+    |> List.map \y -> Num.toStr y
     |> Str.joinWith "\n"
-
-getRandomBall = \num ->
-    num
-    |> Random.seed
-    |> generator
-    |> .value
-    |> Num.toStr
-
-generator =
-    defaultBallNumMin
-    |> Random.int defaultBallNumMax
