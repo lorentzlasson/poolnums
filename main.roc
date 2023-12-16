@@ -21,7 +21,7 @@ main =
     seed <- getSeed |> Task.await
 
     ballCount
-    |> getRandomNuber seed
+    |> getBallNumbers seed
     |> Stdout.line
 
 getBallCountFromArgs =
@@ -50,7 +50,7 @@ generator =
     defaultBallNumMin
     |> Random.int defaultBallNumMax
 
-getRandomNuber = \ballCount, seed ->
+getBallNumbers = \ballCount, seed ->
     List.range { start: At 0, end: Before ballCount }
     |> List.map \i -> getRandomBall (seed + i)
     |> Str.joinWith "\n"
