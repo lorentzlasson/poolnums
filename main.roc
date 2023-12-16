@@ -39,6 +39,11 @@ getSeed =
     |> Task.map Utc.toMillisSinceEpoch
     |> Task.map Num.toU32
 
+getBallNumbers = \ballCount, seed ->
+    List.range { start: At 0, end: Before ballCount }
+    |> List.map \i -> getRandomBall (seed + i)
+    |> Str.joinWith "\n"
+
 getRandomBall = \num ->
     num
     |> Random.seed
@@ -49,9 +54,3 @@ getRandomBall = \num ->
 generator =
     defaultBallNumMin
     |> Random.int defaultBallNumMax
-
-getBallNumbers = \ballCount, seed ->
-    List.range { start: At 0, end: Before ballCount }
-    |> List.map \i -> getRandomBall (seed + i)
-    |> Str.joinWith "\n"
-
