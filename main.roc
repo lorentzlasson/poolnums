@@ -17,24 +17,27 @@ defaultBallNumMin = 1
 defaultBallNumMax = 15
 
 main =
-    args <- Arg.list |> Task.await
-    ballCount = getBallCount args
+    ballCount <- getBallCountFromArgs |> Task.await
+    seed <- getSeed |> Task.await
 
-    n <- Utc.now
-        |> Task.map Utc.toMillisSinceEpoch
-        |> Task.map Num.toU32
-        |> Task.await
-
-    List.range { start: At 0, end: Before ballCount }
-    |> List.map \i -> getRandomBall (n + i)
-    |> Str.joinWith "\n"
+    ballCount
+    |> getRandomNuber seed
     |> Stdout.line
+
+getBallCountFromArgs =
+    Arg.list
+    |> Task.map getBallCount
 
 getBallCount = \args ->
     args
     |> List.get 1
     |> Result.try Str.toU32
     |> Result.withDefault defaultBallCount
+
+getSeed =
+    Utc.now
+    |> Task.map Utc.toMillisSinceEpoch
+    |> Task.map Num.toU32
 
 getRandomBall = \num ->
     num
@@ -43,4 +46,12 @@ getRandomBall = \num ->
     |> .value
     |> Num.toStr
 
-generator = Random.int defaultBallNumMin defaultBallNumMax
+generator =
+    defaultBallNumMin
+    |> Random.int defaultBallNumMax
+
+getRandomNuber = \ballCount, seed ->
+    List.range { start: At 0, end: Before ballCount }
+    |> List.map \i -> getRandomBall (seed + i)
+    |> Str.joinWith "\n"
+
