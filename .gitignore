@@ -1,1 +1,6 @@
+# Ignore all without extensions (build artifacts)
+*
+!*.*
+!*/
+
 tmp
