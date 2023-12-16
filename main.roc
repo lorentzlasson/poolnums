@@ -14,15 +14,6 @@ app "hello"
 defaultBallNumMin = 1
 defaultBallNumMax = 15
 
-generator = Random.int defaultBallNumMin defaultBallNumMax
-
-getRandomBall = \num ->
-    num
-    |> Random.seed
-    |> generator
-    |> .value
-    |> Num.toStr
-
 main =
     n <- Utc.now
         |> Task.map Utc.toMillisSinceEpoch
@@ -33,3 +24,12 @@ main =
     |> List.map \i -> getRandomBall (n + i)
     |> Str.joinWith "\n"
     |> Stdout.line
+
+getRandomBall = \num ->
+    num
+    |> Random.seed
+    |> generator
+    |> .value
+    |> Num.toStr
+
+generator = Random.int defaultBallNumMin defaultBallNumMax
