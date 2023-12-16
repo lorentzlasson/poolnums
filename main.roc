@@ -6,24 +6,35 @@ app "hello"
     imports [
         pf.Stdout,
         pf.Utc,
+        pf.Arg,
         pf.Task.{ Task },
         rand.Random,
     ]
     provides [main] to pf
 
+defaultBallCount = 3
 defaultBallNumMin = 1
 defaultBallNumMax = 15
 
 main =
+    args <- Arg.list |> Task.await
+    ballCount = getBallCount args
+
     n <- Utc.now
         |> Task.map Utc.toMillisSinceEpoch
         |> Task.map Num.toU32
         |> Task.await
 
-    List.range { start: At 0, end: Before 3 }
+    List.range { start: At 0, end: Before ballCount }
     |> List.map \i -> getRandomBall (n + i)
     |> Str.joinWith "\n"
     |> Stdout.line
+
+getBallCount = \args ->
+    args
+    |> List.get 1
+    |> Result.try Str.toU32
+    |> Result.withDefault defaultBallCount
 
 getRandomBall = \num ->
     num
