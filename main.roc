@@ -43,10 +43,10 @@ getSeed =
     |> Task.map Num.toU32
 
 removeRandomFromList = \state, remaining, targetCount ->
-    selectedCount = List.len ballNumbers - Num.toNat targetCount
     remainingCount = List.len remaining
+    selectedCount = List.len ballNumbers - remainingCount
 
-    targetReached = remainingCount == selectedCount
+    targetReached = selectedCount == Num.toNat targetCount
     outOfBalls = remainingCount == 0
 
     if targetReached || outOfBalls then
