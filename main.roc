@@ -20,10 +20,10 @@ main =
     targetCount <- Task.await getTargetCountFromArgs
     time <- Task.await getSeed
 
-    state = Random.seed time
-
-    targetCount
-    |> selectRandomFromList ballNumbers [] state
+    time
+    |> Random.seed
+    |> removeRandomFromList ballNumbers targetCount
+    |> getSelected ballNumbers
     |> format
     |> Stdout.line
 
@@ -41,16 +41,18 @@ getSeed =
     |> Task.map Utc.toMillisSinceEpoch
     |> Task.map Num.toU32
 
-selectRandomFromList = \targetCount, remaining, selected, state ->
-    targetReached = List.len selected == Num.toNat targetCount
+removeRandomFromList = \state, remaining, targetCount ->
+    selectedCount = List.len ballNumbers - Num.toNat targetCount
     remainingCount = List.len remaining
+
+    targetReached = remainingCount == selectedCount
     outOfBalls = remainingCount == 0
 
     if targetReached || outOfBalls then
-        selected
+        remaining
     else
         generator =
-            remainingCount
+            List.len remaining
             |> Num.toI32
             |> Num.sub 1
             |> Random.int 0
@@ -62,32 +64,25 @@ selectRandomFromList = \targetCount, remaining, selected, state ->
             |> .value
             |> Num.toNat
 
-        extraction = extract remaining index
+        ballResult = List.get remaining index
 
-        when extraction is
-            Ok (newRemaining, ball) ->
-                newSelected = List.append selected ball
+        when ballResult is
+            Ok ball ->
+                newRemaining = List.dropIf remaining (\x -> x == ball)
                 newState = generation.state
 
-                selectRandomFromList
-                    targetCount
-                    newRemaining
-                    newSelected
+                removeRandomFromList
                     newState
+                    newRemaining
+                    targetCount
 
             Err _ ->
                 crash "should never happen - outOfBalls guards"
 
-extract = \list, index ->
-    list
-    |> List.get index
-    |> Result.map
-        (\element ->
-            (
-                List.dropIf list (\x -> x == element),
-                element,
-            )
-        )
+getSelected = \remaining, original ->
+    List.dropIf
+        original
+        (\x -> List.contains remaining x)
 
 format = \list ->
     list
