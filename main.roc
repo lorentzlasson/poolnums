@@ -17,10 +17,10 @@ defaultTargetCount = 3
 ballNumbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
 
 main =
-    targetCount <- getTargetCountFromArgs |> Task.await
-    time <- getSeed |> Task.await
+    targetCount <- Task.await getTargetCountFromArgs
+    time <- Task.await getSeed
 
-    state = time |> Random.seed
+    state = Random.seed time
 
     targetCount
     |> selectRandomFromList ballNumbers [] state
@@ -28,8 +28,7 @@ main =
     |> Stdout.line
 
 getTargetCountFromArgs =
-    Arg.list
-    |> Task.map getTargetCount
+    Task.map Arg.list getTargetCount
 
 getTargetCount = \args ->
     args
@@ -44,39 +43,43 @@ getSeed =
 
 selectRandomFromList = \targetCount, available, selected, state ->
     targetReached = List.len selected == Num.toNat targetCount
-    outOfBalls = List.len available == 0
+    availableCount = List.len available
+    outOfBalls = availableCount == 0
 
     if targetReached || outOfBalls then
         selected
     else
-        availableCount =
-            available
-            |> List.len
+        generator =
+            availableCount
             |> Num.toI32
-
-        # TODO: why always 7 as first number if generator 1 to 16?
-        # generator = Random.int 0 (availableCount)
-        generator = Random.int 0 (availableCount - 1)
+            |> Num.sub 1
+            |> Random.int 0
 
         generation = state |> generator
 
-        index = Num.toNat generation.value
+        index =
+            generation
+            |> .value
+            |> Num.toNat
 
-        maybeBall = available |> List.get index
+        maybeBall = List.get available index
 
         when maybeBall is
             Ok ball ->
-                selected2 = selected |> List.append ball
-                available2 = available |> List.dropIf (\x -> x == ball)
-                state2 = generation.state
+                newSelected = List.append selected ball
+                newAvailable = List.dropIf available (\x -> x == ball)
+                newState = generation.state
 
-                targetCount |> selectRandomFromList available2 selected2 state2
+                selectRandomFromList
+                    targetCount
+                    newAvailable
+                    newSelected
+                    newState
 
             Err _ ->
-                crash "should never happen - outOfBalls condition handles it"
-
+                crash "should never happen - outOfBalls guards"
 
 format = \list ->
     list
-    |> List.map \y -> Num.toStr y
+    |> List.map \x -> Num.toStr x
     |> Str.joinWith "\n"
