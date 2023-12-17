@@ -41,16 +41,16 @@ getSeed =
     |> Task.map Utc.toMillisSinceEpoch
     |> Task.map Num.toU32
 
-selectRandomFromList = \targetCount, available, selected, state ->
+selectRandomFromList = \targetCount, remaining, selected, state ->
     targetReached = List.len selected == Num.toNat targetCount
-    availableCount = List.len available
-    outOfBalls = availableCount == 0
+    remainingCount = List.len remaining
+    outOfBalls = remainingCount == 0
 
     if targetReached || outOfBalls then
         selected
     else
         generator =
-            availableCount
+            remainingCount
             |> Num.toI32
             |> Num.sub 1
             |> Random.int 0
@@ -62,16 +62,16 @@ selectRandomFromList = \targetCount, available, selected, state ->
             |> .value
             |> Num.toNat
 
-        extraction = extract available index
+        extraction = extract remaining index
 
         when extraction is
-            Ok (newAvailable, ball) ->
+            Ok (newRemaining, ball) ->
                 newSelected = List.append selected ball
                 newState = generation.state
 
                 selectRandomFromList
                     targetCount
-                    newAvailable
+                    newRemaining
                     newSelected
                     newState
 
