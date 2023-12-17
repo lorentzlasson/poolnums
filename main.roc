@@ -62,12 +62,11 @@ selectRandomFromList = \targetCount, available, selected, state ->
             |> .value
             |> Num.toNat
 
-        maybeBall = List.get available index
+        extraction = extract available index
 
-        when maybeBall is
-            Ok ball ->
+        when extraction is
+            Ok (newAvailable, ball) ->
                 newSelected = List.append selected ball
-                newAvailable = List.dropIf available (\x -> x == ball)
                 newState = generation.state
 
                 selectRandomFromList
@@ -78,6 +77,17 @@ selectRandomFromList = \targetCount, available, selected, state ->
 
             Err _ ->
                 crash "should never happen - outOfBalls guards"
+
+extract = \list, index ->
+    list
+    |> List.get index
+    |> Result.map
+        (\element ->
+            (
+                List.dropIf list (\x -> x == element),
+                element,
+            )
+        )
 
 format = \list ->
     list
