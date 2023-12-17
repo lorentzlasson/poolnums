@@ -43,7 +43,10 @@ getSeed =
     |> Task.map Num.toU32
 
 selectRandomFromList = \targetCount, available, selected, state ->
-    if List.len selected == Num.toNat targetCount then
+    targetReached = List.len selected == Num.toNat targetCount
+    outOfBalls = List.len available == 0
+
+    if targetReached || outOfBalls then
         selected
     else
         availableCount =
@@ -59,16 +62,19 @@ selectRandomFromList = \targetCount, available, selected, state ->
 
         index = Num.toNat generation.value
 
-        ball =
-            available
-            |> List.get index
-            |> Result.withDefault -999
+        maybeBall = available |> List.get index
 
-        selected2 = selected |> List.append ball
-        available2 = available |> List.dropIf (\x -> x == ball)
-        state2 = generation.state
+        when maybeBall is
+            Ok ball ->
+                selected2 = selected |> List.append ball
+                available2 = available |> List.dropIf (\x -> x == ball)
+                state2 = generation.state
 
-        targetCount |> selectRandomFromList available2 selected2 state2
+                targetCount |> selectRandomFromList available2 selected2 state2
+
+            Err _ ->
+                crash "should never happen - outOfBalls condition handles it"
+
 
 format = \list ->
     list
