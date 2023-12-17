@@ -58,7 +58,7 @@ removeRandomFromList = \state, remaining, targetCount ->
             |> Num.sub 1
             |> Random.int 0
 
-        generation = state |> generator
+        generation = generator state
 
         index =
             generation
