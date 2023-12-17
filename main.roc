@@ -24,6 +24,7 @@ main =
     |> Random.seed
     |> removeRandomFromList ballNumbers targetCount
     |> getSelected ballNumbers
+    |> List.sortAsc
     |> format
     |> Stdout.line
 
