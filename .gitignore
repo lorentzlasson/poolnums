@@ -2,6 +2,7 @@
 *
 !*.*
 !*/
+!Dockerfile
 
 tmp
 lab.roc
