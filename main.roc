@@ -1,12 +1,12 @@
 app "poolnums"
     packages {
-        pf: "https://github.com/roc-lang/basic-cli/releases/download/0.7.0/bkGby8jb0tmZYsy2hg1E_B2QrCgcSTxdUlHtETwm5m4.tar.br",
+        pf: "https://github.com/roc-lang/basic-webserver/releases/download/0.1/dCL3KsovvV-8A5D_W_0X_abynkcRcoAngsgF0xtvQsk.tar.br",
         rand: "https://github.com/lukewilliamboswell/roc-random/releases/download/0.0.1/x_XwrgehcQI4KukXligrAkWTavqDAdE5jGamURpaX-M.tar.br",
     }
     imports [
-        pf.Stdout,
         pf.Utc,
-        pf.Arg,
+        pf.Http, # Unused but needed?
+        pf.Url,
         pf.Task.{ Task },
         rand.Random,
     ]
@@ -16,8 +16,8 @@ defaultTargetCount = 3
 
 ballNumbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
 
-main =
-    targetCount <- Task.await getTargetCountFromArgs
+main = \req ->
+    targetCount = getTargetCount req.url
     time <- Task.await getSeed
 
     time
@@ -26,14 +26,13 @@ main =
     |> getSelected ballNumbers
     |> List.sortAsc
     |> format
-    |> Stdout.line
+    |> respond
 
-getTargetCountFromArgs =
-    Task.map Arg.list getTargetCount
-
-getTargetCount = \args ->
-    args
-    |> List.get 1
+getTargetCount = \urlStr ->
+    urlStr
+    |> Url.fromStr
+    |> Url.queryParams
+    |> Dict.get "balls"
     |> Result.try Str.toU32
     |> Result.withDefault defaultTargetCount
 
@@ -89,3 +88,15 @@ format = \list ->
     list
     |> List.map \x -> Num.toStr x
     |> Str.joinWith "\n"
+
+respond = \body ->
+    Task.ok {
+        status: 200,
+        headers: [
+            {
+                name: "Content-Type",
+                value: Str.toUtf8 "text/html; charset=utf-8",
+            },
+        ],
+        body: Str.toUtf8 body,
+    }
