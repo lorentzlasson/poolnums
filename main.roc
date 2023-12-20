@@ -96,7 +96,7 @@ respond = \body ->
         headers: [
             {
                 name: "Content-Type",
-                value: Str.toUtf8 "text/html; charset=utf-8",
+                value: Str.toUtf8 "application/json; charset=utf-8",
             },
         ],
         body: Str.toUtf8 body,
