@@ -17,8 +17,9 @@ defaultTargetCount = 3
 ballNumbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
 
 main = \req ->
-    targetCount = getTargetCount req.url
     time <- Task.await getSeed
+
+    targetCount = getTargetCount req.url
 
     time
     |> Random.seed
@@ -28,6 +29,11 @@ main = \req ->
     |> format
     |> respond
 
+getSeed =
+    Utc.now
+    |> Task.map Utc.toMillisSinceEpoch
+    |> Task.map Num.toU32
+
 getTargetCount = \urlStr ->
     urlStr
     |> Url.fromStr
@@ -35,11 +41,6 @@ getTargetCount = \urlStr ->
     |> Dict.get "balls"
     |> Result.try Str.toU32
     |> Result.withDefault defaultTargetCount
-
-getSeed =
-    Utc.now
-    |> Task.map Utc.toMillisSinceEpoch
-    |> Task.map Num.toU32
 
 removeRandomFromList = \state, remaining, targetCount ->
     remainingCount = List.len remaining
