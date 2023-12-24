@@ -15,7 +15,25 @@ app "poolnums"
 
 defaultTargetCount = 3
 
-ballNumbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+allBalls = [
+    { number: 1, color: "yellow" },
+    { number: 2, color: "blue" },
+    { number: 3, color: "red" },
+    { number: 4, color: "purple" },
+    { number: 5, color: "orange" },
+    { number: 6, color: "green" },
+    { number: 7, color: "brown" },
+    { number: 8, color: "black" },
+    { number: 9, color: "yellow" },
+    { number: 10, color: "blue" },
+    { number: 11, color: "red" },
+    { number: 12, color: "purple" },
+    { number: 13, color: "orange" },
+    { number: 14, color: "green" },
+    { number: 15, color: "brown" },
+]
+
+allBallNumbers = List.map allBalls .number
 
 main = \req ->
     time <- Task.await getSeed
@@ -24,8 +42,8 @@ main = \req ->
 
     time
     |> Random.seed
-    |> removeRandomFromList ballNumbers targetCount
-    |> getSelected ballNumbers
+    |> removeRandomFromList allBallNumbers targetCount
+    |> getSelected allBallNumbers
     |> List.sortAsc
     |> respond
 
@@ -44,7 +62,7 @@ getTargetCount = \urlStr ->
 
 removeRandomFromList = \state, remaining, targetCount ->
     remainingCount = List.len remaining
-    selectedCount = List.len ballNumbers - remainingCount
+    selectedCount = List.len allBallNumbers - remainingCount
 
     targetReached = selectedCount == Num.toNat targetCount
     outOfBalls = remainingCount == 0
@@ -85,23 +103,50 @@ getSelected = \remaining, original ->
         original
         (\x -> List.contains remaining x)
 
-respond = \balls ->
+respond = \ballNumbers ->
     Task.ok {
         status: 200,
         headers: [
             {
                 name: "Content-Type",
-                value: Str.toUtf8 "application/json; charset=utf-8",
+                value: Str.toUtf8 "text/html; charset=utf-8",
             },
         ],
-        body: getResponseBody balls,
+        body: getResponseBody ballNumbers,
     }
 
-getResponseBody = \balls ->
-    balls
-    |> List.map renderBall
-    |> Str.joinWith ""
+getResponseBody = \ballNumbers ->
+    ballDivs =
+        ballNumbers
+        |> List.map renderBall
+        |> Str.joinWith ""
+
+    """
+    <html>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="
+        background: #292929;
+        font-size: 20vh;
+      ">
+        \(ballDivs)
+      </body>
+    </html>
+    """
     |> Str.toUtf8
 
-renderBall = \ball ->
-    "(\(Num.toStr ball))\n"
+renderBall = \ballNumber ->
+    s = Num.toStr ballNumber
+
+    color =
+        allBalls
+        |> List.findFirst \x -> x.number == ballNumber
+        |> Result.map \x -> x.color
+        |> Result.withDefault "X"
+
+    """
+    <div style="color: \(color);">
+      (\(s))
+    </div>
+    """
