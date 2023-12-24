@@ -27,7 +27,6 @@ main = \req ->
     |> removeRandomFromList ballNumbers targetCount
     |> getSelected ballNumbers
     |> List.sortAsc
-    |> format
     |> respond
 
 getSeed =
@@ -86,12 +85,7 @@ getSelected = \remaining, original ->
         original
         (\x -> List.contains remaining x)
 
-format = \list ->
-    list
-    |> List.map \x -> Num.toStr x
-    |> Str.joinWith "\n"
-
-respond = \body ->
+respond = \balls ->
     Task.ok {
         status: 200,
         headers: [
@@ -100,5 +94,14 @@ respond = \body ->
                 value: Str.toUtf8 "application/json; charset=utf-8",
             },
         ],
-        body: Str.toUtf8 body,
+        body: getResponseBody balls,
     }
+
+getResponseBody = \balls ->
+    balls
+    |> List.map renderBall
+    |> Str.joinWith ""
+    |> Str.toUtf8
+
+renderBall = \ball ->
+    "(\(Num.toStr ball))\n"
