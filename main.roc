@@ -3,6 +3,7 @@ app "poolnums"
         # pf: "../basic-webserver/platform/main.roc",
         pf: "https://github.com/roc-lang/basic-webserver/releases/download/0.1/dCL3KsovvV-8A5D_W_0X_abynkcRcoAngsgF0xtvQsk.tar.br",
         rand: "https://github.com/lukewilliamboswell/roc-random/releases/download/0.0.1/x_XwrgehcQI4KukXligrAkWTavqDAdE5jGamURpaX-M.tar.br",
+        html: "https://github.com/Hasnep/roc-html/releases/download/v0.2.0/5fqQTpMYIZkigkDa2rfTc92wt-P_lsa76JVXb8Qb3ms.tar.br",
     }
     imports [
         pf.Utc,
@@ -10,6 +11,8 @@ app "poolnums"
         pf.Url,
         pf.Task.{ Task },
         rand.Random,
+        html.Html,
+        html.Attribute,
     ]
     provides [main] to pf
 
@@ -117,23 +120,20 @@ respond = \ballNumbers ->
     }
 
 getResponseBody = \ballNumbers ->
-    ballDivs =
-        ballNumbers
-        |> List.map renderBall
-        |> Str.joinWith ""
+    ballDivs = List.map ballNumbers renderBall
 
-    """
-    <html>
-      <body style="
+    style =
+        """
         background: #292929;
         display: flex;
         flex-direction: column;
         align-items: center;
-      ">
-        \(ballDivs)
-      </body>
-    </html>
-    """
+        """
+
+    Html.html [] [
+        Html.body [Attribute.style style] ballDivs,
+    ]
+    |> Html.render
     |> Str.toUtf8
 
 renderBall = \ballNumber ->
@@ -144,9 +144,12 @@ renderBall = \ballNumber ->
 
     when maybeImage is
         Ok image ->
-            """
-            <img src="\(image)" style="max-height: 25vh;">
-            """
+            Html.img
+                [
+                    Attribute.src image,
+                    Attribute.style "max-height: 25vh;",
+                ]
+                []
 
         Err _ ->
             crash "should never happen"
