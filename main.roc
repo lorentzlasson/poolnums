@@ -75,7 +75,8 @@ removeRandomFromList = \state, remaining, targetCount ->
         remaining
     else
         generator =
-            List.len remaining
+            remaining
+            |> List.len
             |> Num.toI32
             |> Num.sub 1
             |> Random.int 0
