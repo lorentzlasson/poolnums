@@ -145,7 +145,7 @@ renderBall = \ballNumber ->
     when maybeImage is
         Ok image ->
             """
-            <img src="\(image)" style="max-height: 30vh;">
+            <img src="\(image)" style="max-height: 25vh;">
             """
 
         Err _ ->
