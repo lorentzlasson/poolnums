@@ -16,21 +16,22 @@ app "poolnums"
 defaultTargetCount = 3
 
 allBalls = [
-    { number: 1, color: "yellow" },
-    { number: 2, color: "blue" },
-    { number: 3, color: "red" },
-    { number: 4, color: "purple" },
-    { number: 5, color: "orange" },
-    { number: 6, color: "green" },
-    { number: 7, color: "brown" },
-    { number: 8, color: "black" },
-    { number: 9, color: "yellow" },
-    { number: 10, color: "blue" },
-    { number: 11, color: "red" },
-    { number: 12, color: "purple" },
-    { number: 13, color: "orange" },
-    { number: 14, color: "green" },
-    { number: 15, color: "brown" },
+    { number: 1, image: "https://static.vecteezy.com/system/resources/previews/009/305/112/large_2x/billiard-balls-clipart-design-illustration-free-png.png" },
+    { number: 2, image: "https://static.vecteezy.com/system/resources/previews/009/391/424/non_2x/billiard-balls-clipart-design-illustration-free-png.png" },
+    { number: 3, image: "https://static.vecteezy.com/system/resources/previews/009/380/190/non_2x/billiard-balls-clipart-design-illustration-free-png.png" },
+    { number: 4, image: "https://static.vecteezy.com/system/resources/previews/009/383/768/non_2x/billiard-balls-clipart-design-illustration-free-png.png" },
+    { number: 5, image: "https://static.vecteezy.com/system/resources/previews/009/380/189/non_2x/billiard-balls-clipart-design-illustration-free-png.png" },
+    { number: 6, image: "https://static.vecteezy.com/system/resources/previews/009/380/385/non_2x/billiard-balls-clipart-design-illustration-free-png.png" },
+    { number: 7, image: "https://static.vecteezy.com/system/resources/previews/009/398/873/large_2x/billiard-balls-clipart-design-illustration-free-png.png" },
+    { number: 8, image: "https://static.vecteezy.com/system/resources/previews/009/384/622/non_2x/billiard-balls-clipart-design-illustration-free-png.png" },
+    { number: 9, image: "https://static.vecteezy.com/system/resources/previews/009/381/024/non_2x/billiard-balls-clipart-design-illustration-free-png.png" },
+    { number: 10, image: "https://static.vecteezy.com/system/resources/previews/009/385/468/non_2x/billiard-balls-clipart-design-illustration-free-png.png" },
+    { number: 11, image: "https://static.vecteezy.com/system/resources/previews/009/383/774/non_2x/billiard-balls-clipart-design-illustration-free-png.png" },
+    # TODO: number 12 is not in same style
+    { number: 12, image: "https://static.vecteezy.com/system/resources/previews/021/080/770/large_2x/pool-ball-design-illustration-isolated-on-transparent-background-free-png.png" },
+    { number: 13, image: "https://static.vecteezy.com/system/resources/previews/009/385/377/non_2x/billiard-balls-clipart-design-illustration-free-png.png" },
+    { number: 14, image: "https://static.vecteezy.com/system/resources/previews/009/391/555/non_2x/billiard-balls-clipart-design-illustration-free-png.png" },
+    { number: 15, image: "https://static.vecteezy.com/system/resources/previews/009/398/161/large_2x/billiard-balls-clipart-design-illustration-free-png.png" },
 ]
 
 allBallNumbers = List.map allBalls .number
@@ -128,7 +129,9 @@ getResponseBody = \ballNumbers ->
       </head>
       <body style="
         background: #292929;
-        font-size: 20vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
       ">
         \(ballDivs)
       </body>
@@ -137,16 +140,17 @@ getResponseBody = \ballNumbers ->
     |> Str.toUtf8
 
 renderBall = \ballNumber ->
-    s = Num.toStr ballNumber
-
-    color =
+    maybeImage =
         allBalls
         |> List.findFirst \x -> x.number == ballNumber
-        |> Result.map \x -> x.color
-        |> Result.withDefault "X"
+        |> Result.map \x -> x.image
 
-    """
-    <div style="color: \(color);">
-      (\(s))
-    </div>
-    """
+    when maybeImage is
+        Ok image ->
+            """
+            <img src="\(image)" style="max-height: 30vh;">
+            """
+
+        Err _ ->
+            crash "should never happen"
+
