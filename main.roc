@@ -1,19 +1,32 @@
 app "poolnums"
     packages {
-        # pf: "../basic-webserver/platform/main.roc",
-        pf: "https://github.com/roc-lang/basic-webserver/releases/download/0.1/dCL3KsovvV-8A5D_W_0X_abynkcRcoAngsgF0xtvQsk.tar.br",
+        pf: "../basic-webserver/platform/main.roc",
+        # pf: "https://github.com/roc-lang/basic-webserver/releases/download/0.1/dCL3KsovvV-8A5D_W_0X_abynkcRcoAngsgF0xtvQsk.tar.br",
         rand: "https://github.com/lukewilliamboswell/roc-random/releases/download/0.0.1/x_XwrgehcQI4KukXligrAkWTavqDAdE5jGamURpaX-M.tar.br",
         html: "https://github.com/Hasnep/roc-html/releases/download/v0.2.0/5fqQTpMYIZkigkDa2rfTc92wt-P_lsa76JVXb8Qb3ms.tar.br",
+        pg: "../roc-pg/src/main.roc",
     }
     imports [
         pf.Utc,
-        pf.Http, # Unused but needed?
         pf.Url,
         pf.Task.{ Task },
+        pf.Stdout,
+        pf.Stderr,
         rand.Random,
         html.Html,
         html.Attribute,
+        pg.Pg.Cmd,
+        pg.Pg.BasicCliClient,
+        pg.Pg.Result,
+
+        # Unused but required because of: https://github.com/roc-lang/roc/issues/5477
+        pf.Tcp,
+        pg.Cmd,
+
+        # Unused but needed to build
+        pf.Http,
     ]
+
     provides [main] to pf
 
 defaultTargetCount = 3
@@ -44,12 +57,20 @@ main = \req ->
 
     targetCount = getTargetCount req.url
 
-    time
-    |> Random.seed
-    |> removeRandomFromList allBallNumbers targetCount
-    |> getSelected allBallNumbers
-    |> List.sortAsc
-    |> respond
+    selection =
+        time
+        |> Random.seed
+        |> removeRandomFromList allBallNumbers targetCount
+        |> getSelected allBallNumbers
+        |> List.sortAsc
+
+    {} <- selection
+        |> tupleifyFirst3
+        |> storeSelection
+        |> handlePgError
+        |> Task.await
+
+    respond selection
 
 getSeed =
     Utc.now
@@ -107,6 +128,60 @@ getSelected = \remaining, original ->
     List.dropIf
         original
         (\x -> List.contains remaining x)
+
+tupleifyFirst3 = \selection ->
+    when selection is
+        [a, b, c, ..] ->
+            (a, b, c)
+
+        _ ->
+            (0, 0, 0)
+
+storeSelection = \selection ->
+    client <- Pg.BasicCliClient.withConnect {
+            host: "localhost",
+            port: 5432,
+            user: "rkv",
+            auth: None,
+            database: "rkv",
+        }
+
+    response <-
+        """
+        insert into selection (a, b, c)
+        values ($1, $2, $3)
+        returning time
+        """
+        |> Pg.Cmd.new
+        |> Pg.Cmd.bind [
+            Pg.Cmd.u8 selection.0,
+            Pg.Cmd.u8 selection.1,
+            Pg.Cmd.u8 selection.2,
+        ]
+        |> Pg.Cmd.expect1 (Pg.Result.str "time")
+        |> Pg.BasicCliClient.command client
+        |> Task.await
+
+    Stdout.line response
+
+handlePgError = \task ->
+    result <- Task.attempt task
+    when result is
+        Ok _ ->
+            Task.ok {}
+
+        Err (TcpPerformErr (PgErr err)) ->
+            {} <- err
+                |> Pg.BasicCliClient.errorToStr
+                |> Stderr.line
+                |> Task.await
+
+            Task.ok {}
+
+        Err e ->
+            dbg e
+
+            Task.ok {}
 
 respond = \ballNumbers ->
     Task.ok {

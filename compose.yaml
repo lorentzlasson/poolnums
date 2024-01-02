@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:15
+    command: ["postgres", "-c", "log_statement=all"]
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: rkv
+      # POSTGRES_PASSWORD: supersecret
+      POSTGRES_HOST_AUTH_METHOD: trust
+      POSTGRES_DB: rkv
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
