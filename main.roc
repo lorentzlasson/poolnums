@@ -29,6 +29,14 @@ app "poolnums"
 
     provides [main] to pf
 
+dbConfig = {
+    host: "localhost",
+    port: 5432,
+    user: "rkv",
+    auth: None,
+    database: "rkv",
+}
+
 defaultTargetCount = 3
 
 allBalls = [
@@ -153,13 +161,7 @@ tupleifyFirst3 = \selection ->
             NotTriplet
 
 storeSelection = \selection ->
-    client <- Pg.BasicCliClient.withConnect {
-            host: "localhost",
-            port: 5432,
-            user: "rkv",
-            auth: None,
-            database: "rkv",
-        }
+    client <- Pg.BasicCliClient.withConnect dbConfig
 
     when selection is
         Triplet (a, b, c) ->
