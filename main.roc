@@ -53,9 +53,25 @@ allBalls = [
 allBallNumbers = List.map allBalls .number
 
 main = \req ->
+    url = Url.fromStr req.url
+
+    when (req.method, urlSegments url) is
+        (Get, [""]) ->
+            generateBoolBalls url
+
+        _ ->
+            respond404
+
+urlSegments = \url ->
+    url
+    |> Url.path
+    |> Str.split "/"
+    |> List.dropFirst 1
+
+generateBoolBalls = \url ->
     time <- Task.await getSeed
 
-    targetCount = getTargetCount req.url
+    targetCount = getTargetCount url
 
     selection =
         time
@@ -77,9 +93,8 @@ getSeed =
     |> Task.map Utc.toMillisSinceEpoch
     |> Task.map Num.toU32
 
-getTargetCount = \urlStr ->
-    urlStr
-    |> Url.fromStr
+getTargetCount = \url ->
+    url
     |> Url.queryParams
     |> Dict.get "balls"
     |> Result.try Str.toU32
@@ -241,3 +256,9 @@ renderBall = \ballNumber ->
         Err _ ->
             crash "should never happen"
 
+respond404 =
+    Task.ok {
+        status: 404,
+        headers: [],
+        body: [],
+    }
