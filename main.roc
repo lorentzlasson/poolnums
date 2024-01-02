@@ -131,11 +131,11 @@ getSelected = \remaining, original ->
 
 tupleifyFirst3 = \selection ->
     when selection is
-        [a, b, c, ..] ->
-            (a, b, c)
+        [a, b, c] ->
+            Triplet (a, b, c)
 
         _ ->
-            (0, 0, 0)
+            NotTriplet
 
 storeSelection = \selection ->
     client <- Pg.BasicCliClient.withConnect {
@@ -146,23 +146,28 @@ storeSelection = \selection ->
             database: "rkv",
         }
 
-    response <-
-        """
-        insert into selection (a, b, c)
-        values ($1, $2, $3)
-        returning time
-        """
-        |> Pg.Cmd.new
-        |> Pg.Cmd.bind [
-            Pg.Cmd.u8 selection.0,
-            Pg.Cmd.u8 selection.1,
-            Pg.Cmd.u8 selection.2,
-        ]
-        |> Pg.Cmd.expect1 (Pg.Result.str "time")
-        |> Pg.BasicCliClient.command client
-        |> Task.await
+    when selection is
+        Triplet (a, b, c) ->
+            response <-
+                """
+                insert into selection (a, b, c)
+                values ($1, $2, $3)
+                returning time
+                """
+                |> Pg.Cmd.new
+                |> Pg.Cmd.bind [
+                    Pg.Cmd.u8 a,
+                    Pg.Cmd.u8 b,
+                    Pg.Cmd.u8 c,
+                ]
+                |> Pg.Cmd.expect1 (Pg.Result.str "time")
+                |> Pg.BasicCliClient.command client
+                |> Task.await
 
-    Stdout.line response
+            Stdout.line response
+
+        NotTriplet ->
+            Stdout.line "non-triplet selection"
 
 handlePgError = \task ->
     result <- Task.attempt task
