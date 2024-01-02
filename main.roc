@@ -163,7 +163,7 @@ storeSelection = \selection ->
 
     when selection is
         Triplet (a, b, c) ->
-            response <-
+            time <-
                 """
                 insert into selection (a, b, c)
                 values ($1, $2, $3)
@@ -179,7 +179,7 @@ storeSelection = \selection ->
                 |> Pg.BasicCliClient.command client
                 |> Task.await
 
-            Stdout.line response
+            Stdout.line "Triplet stored at \(time)"
 
         NotTriplet ->
             Stdout.line "non-triplet selection"
