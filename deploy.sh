@@ -1,5 +1,14 @@
-#!/bin/sh
-# switch to local platform source on main.roc:3
-# docker login
-docker build --tag rymdkraftverk/poolnums:latest .
+#!/bin/bash
+source .env
+
+set -e
+
+ls ../basic-webserver/platform/main.roc
+
+docker login
+(
+  cd ..
+  docker build --file poolnums/Dockerfile --tag rymdkraftverk/poolnums:latest .
+)
 docker push rymdkraftverk/poolnums:latest
+curl -X POST $DEPLOY_URL
