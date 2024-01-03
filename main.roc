@@ -125,7 +125,7 @@ getResponseBody = \ballNumbers ->
 
     style =
         """
-        background: #292929;
+        background: #117f38;
         display: flex;
         flex-direction: column;
         align-items: center;
