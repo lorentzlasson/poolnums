@@ -143,12 +143,18 @@ renderBall = \ballNumber ->
         |> List.findFirst \x -> x.number == ballNumber
         |> Result.map \x -> x.image
 
+    style =
+        """
+        max-height: 25vh;
+        padding: 10px;
+        """
+
     when maybeImage is
         Ok image ->
             Html.img
                 [
                     Attribute.src image,
-                    Attribute.style "max-height: 25vh;",
+                    Attribute.style style,
                 ]
                 []
 
