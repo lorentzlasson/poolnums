@@ -201,7 +201,10 @@ handlePgError = \task ->
             Task.ok {}
 
         Err e ->
-            dbg e
+            {} <- e
+                |> Inspect.toStr
+                |> Stderr.line
+                |> Task.await
 
             Task.ok {}
 
