@@ -6,6 +6,7 @@ RUN tar -xvz -f roc.tar.gz --directory /usr/bin --strip-components=1 # will be a
 
 COPY ./poolnums/main.roc /poolnums/main.roc
 COPY ./basic-webserver /basic-webserver
+COPY ./roc-pg /roc-pg
 
 RUN roc build /poolnums/main.roc; exit 0 # ignore faulty compile warnings
 
