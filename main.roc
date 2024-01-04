@@ -33,7 +33,7 @@ dbConfig = {
     host: "localhost",
     port: 5432,
     user: "rkv",
-    auth: None,
+    auth: Password "supersecret",
     database: "rkv",
 }
 
