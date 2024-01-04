@@ -10,10 +10,13 @@ COPY ./roc-pg /roc-pg
 
 RUN roc build /poolnums/main.roc; exit 0 # ignore faulty compile warnings
 
-FROM debian as run
+FROM postgres:15.5 as run
 
 COPY --from=builder /poolnums/main /
 
 ENV ROC_BASIC_WEBSERVER_HOST=0.0.0.0
 
-CMD ./main
+COPY ./poolnums/schema.sql /docker-entrypoint-initdb.d/1-schema.sql
+COPY ./poolnums/docker-start.sh /
+
+CMD ./docker-start.sh
