@@ -67,6 +67,16 @@ main = \req ->
         (Get, [""]) ->
             generateBoolBalls url
 
+        (Get, ["data"]) ->
+            dbg "data"
+
+            {} <-
+                getData {}
+                |> handlePgError
+                |> Task.await
+
+            respond404
+
         _ ->
             respond404
 
@@ -189,7 +199,12 @@ storeSelection = \selection ->
 handlePgError = \task ->
     result <- Task.attempt task
     when result is
-        Ok _ ->
+        Ok x ->
+            {} <- x
+                |> Inspect.toStr
+                |> Stderr.line
+                |> Task.await
+
             Task.ok {}
 
         Err (TcpPerformErr (PgErr err)) ->
@@ -260,6 +275,31 @@ renderBall = \ballNumber ->
 
         Err _ ->
             crash "should never happen"
+
+getData = \_ ->
+    client <- Pg.BasicCliClient.withConnect dbConfig
+
+    rows <-
+        """
+        select time, a, b, c
+        from selections
+        """
+        |> Pg.Cmd.new
+        |> Pg.Cmd.expectN
+            (
+                Pg.Result.succeed
+                    (\time -> \a -> \b -> \c ->
+                                    "\(time): \(Num.toStr a) \(Num.toStr b) \(Num.toStr c)"
+                    )
+                |> Pg.Result.with (Pg.Result.str "time")
+                |> Pg.Result.with (Pg.Result.u8 "a")
+                |> Pg.Result.with (Pg.Result.u8 "b")
+                |> Pg.Result.with (Pg.Result.u8 "c")
+            )
+        |> Pg.BasicCliClient.command client
+        |> Task.await
+
+    Stdout.line (Str.joinWith rows "\n")
 
 respond404 =
     Task.ok {
