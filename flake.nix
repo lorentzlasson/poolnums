@@ -23,6 +23,7 @@
             buildInputs =
               [
                 rocFull # includes CLI
+                pkgs.pgcli
               ];
           };
         };
