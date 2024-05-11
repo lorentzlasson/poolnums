@@ -1,33 +1,21 @@
-app "poolnums"
-    packages {
-        pf: "../basic-webserver/platform/main.roc",
-        # pf: "https://github.com/roc-lang/basic-webserver/releases/download/0.1/dCL3KsovvV-8A5D_W_0X_abynkcRcoAngsgF0xtvQsk.tar.br",
-        rand: "https://github.com/lukewilliamboswell/roc-random/releases/download/0.0.1/x_XwrgehcQI4KukXligrAkWTavqDAdE5jGamURpaX-M.tar.br",
-        html: "https://github.com/Hasnep/roc-html/releases/download/v0.2.0/5fqQTpMYIZkigkDa2rfTc92wt-P_lsa76JVXb8Qb3ms.tar.br",
-        pg: "../roc-pg/src/main.roc",
-    }
-    imports [
-        pf.Utc,
-        pf.Url,
-        pf.Task.{ Task },
-        pf.Stdout,
-        pf.Stderr,
-        rand.Random,
-        html.Html,
-        html.Attribute,
-        pg.Pg.Cmd,
-        pg.Pg.BasicCliClient,
-        pg.Pg.Result,
+app [main] {
+    pf: platform "https://github.com/roc-lang/basic-webserver/releases/download/0.4.0/iAiYpbs5zdVB75golcg_YMtgexN3e2fwhsYPLPCeGzk.tar.br",
+    rand: "https://github.com/lukewilliamboswell/roc-random/releases/download/0.1.0/OoD8jmqBLc0gyuaadckDMx1jedEa03EdGSR_V4KhH7g.tar.br",
+    html: "https://github.com/Hasnep/roc-html/releases/download/v0.5.0/XwBpQRYuyf9W1fLKkhnoiSdSDmzwEojvpp3RgPmORow.tar.br",
+    pg: "https://github.com/agu-z/roc-pg/releases/download/0.1.0/nb1q6kN1pu1xvv45w2tE7JjbQ60hOyR1NMxxhRMCVFc.tar.br",
+}
 
-        # Unused but required because of: https://github.com/roc-lang/roc/issues/5477
-        pf.Tcp,
-        pg.Cmd,
-
-        # Unused but needed to build
-        pf.Http,
-    ]
-
-    provides [main] to pf
+import pf.Utc
+import pf.Url
+import pf.Task exposing [Task]
+import pf.Stdout
+import pf.Stderr
+import rand.Random
+import html.Html
+import html.Attribute
+import pg.Pg.Cmd
+import pg.Pg.BasicCliClient
+import pg.Pg.Result
 
 dbConfig = {
     host: "localhost",
@@ -84,7 +72,7 @@ generateBoolBalls = \url ->
     selection =
         time
         |> Random.seed
-        |> removeRandomFromList allBallNumbers targetCount
+        |> removeRandomFromList allBallNumbers (Num.toU64 targetCount)
         |> getSelected allBallNumbers
         |> List.sortAsc
 
@@ -112,7 +100,7 @@ removeRandomFromList = \state, remaining, targetCount ->
     remainingCount = List.len remaining
     selectedCount = List.len allBallNumbers - remainingCount
 
-    targetReached = selectedCount == Num.toNat targetCount
+    targetReached = selectedCount == targetCount
     outOfBalls = remainingCount == 0
 
     if targetReached || outOfBalls then
@@ -130,9 +118,8 @@ removeRandomFromList = \state, remaining, targetCount ->
         index =
             generation
             |> .value
-            |> Num.toNat
 
-        ballResult = List.get remaining index
+        ballResult = List.get remaining (Num.toU64 index)
 
         when ballResult is
             Ok ball ->
@@ -181,7 +168,7 @@ storeSelection = \selection ->
                 |> Pg.BasicCliClient.command client
                 |> Task.await
 
-            Stdout.line "Triplet stored at \(time)"
+            Stdout.line "Triplet stored at $(time)"
 
         NotTriplet ->
             Stdout.line "non-triplet selection"
@@ -251,12 +238,10 @@ renderBall = \ballNumber ->
 
     when maybeImage is
         Ok image ->
-            Html.img
-                [
-                    Attribute.src image,
-                    Attribute.style style,
-                ]
-                []
+            Html.img [
+                Attribute.src image,
+                Attribute.style style,
+            ]
 
         Err _ ->
             crash "should never happen"
