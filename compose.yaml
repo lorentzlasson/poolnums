@@ -10,5 +10,10 @@ services:
       - pgdata:/var/lib/postgresql/data
       - ./schema.sql:/docker-entrypoint-initdb.d/1-schema.sql
 
+  poolnums:
+    build: .
+    ports:
+      - 8000:8000
+
 volumes:
   pgdata:
