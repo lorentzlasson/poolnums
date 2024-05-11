@@ -5,10 +5,7 @@ services:
     ports:
       - 5432:5432
     environment:
-      POSTGRES_USER: rkv
-      POSTGRES_PASSWORD: supersecret
-      POSTGRES_HOST_AUTH_METHOD: password
-      POSTGRES_DB: rkv
+      POSTGRES_HOST_AUTH_METHOD: trust
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./schema.sql:/docker-entrypoint-initdb.d/1-schema.sql

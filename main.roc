@@ -20,9 +20,8 @@ import pg.Pg.Result
 dbConfig = {
     host: "localhost",
     port: 5432,
-    user: "rkv",
-    auth: Password "supersecret",
-    database: "rkv",
+    user: "postgres",
+    database: "postgres",
 }
 
 defaultTargetCount = 3
