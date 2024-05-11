@@ -1,14 +1,9 @@
-#!/bin/bash
-source .env
+#!/usr/bin/env bash
+. .env
 
 set -e
 
-ls ../basic-webserver/platform/main.roc
-
 docker login
-(
-  cd ..
-  docker build --file poolnums/Dockerfile --tag rymdkraftverk/poolnums:latest .
-)
+docker build --file Dockerfile --tag rymdkraftverk/poolnums:latest .
 docker push rymdkraftverk/poolnums:latest
-curl -X POST $DEPLOY_URL
+curl --request POST "$DEPLOY_URL"
