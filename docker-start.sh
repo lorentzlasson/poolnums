@@ -5,4 +5,6 @@ export POSTGRES_HOST_AUTH_METHOD=trust
 # and run in background
 docker-entrypoint.sh postgres &
 
+until pg_isready --host localhost --quiet; do sleep 1; done
+
 ./main

@@ -1,32 +1,33 @@
-app [main] {
-    pf: platform "https://github.com/roc-lang/basic-webserver/releases/download/0.4.0/iAiYpbs5zdVB75golcg_YMtgexN3e2fwhsYPLPCeGzk.tar.br",
-    rand: "https://github.com/lukewilliamboswell/roc-random/releases/download/0.1.0/OoD8jmqBLc0gyuaadckDMx1jedEa03EdGSR_V4KhH7g.tar.br",
-    html: "https://github.com/Hasnep/roc-html/releases/download/v0.5.0/XwBpQRYuyf9W1fLKkhnoiSdSDmzwEojvpp3RgPmORow.tar.br",
-    pg: "https://github.com/agu-z/roc-pg/releases/download/0.1.0/nb1q6kN1pu1xvv45w2tE7JjbQ60hOyR1NMxxhRMCVFc.tar.br",
+app [Model, init!, respond!] {
+    pf: platform "https://github.com/roc-lang/basic-webserver/releases/download/0.13.1/7P4PF5rntQVkys5JbIHqkMpZIXo-pxa5lVqOdh7z8fE.tar.br",
+    rand: "https://github.com/lukewilliamboswell/roc-random/releases/download/0.5.0/yDUoWipuyNeJ-euaij4w_ozQCWtxCsywj68H0PlJAdE.tar.br",
+    html: "https://github.com/Hasnep/roc-html/releases/download/v0.8.0/GCTX3ckGRXs29XkLh0rhp0a6l0IrUe5RgAFj83hwN3Q.tar.br",
+    pg: "https://github.com/agu-z/roc-pg/releases/download/0.1.1/PjwASOJalDKErbHkj3bXskhGbgqGzVSbki4Nv7xOEe0.tar.br",
 }
 
+import pf.Stderr
 import pf.Utc
 import pf.Url
-import pf.Task exposing [Task]
-import pf.Stdout
-import pf.Stderr
 import rand.Random
 import html.Html
 import html.Attribute
+import pg.Pg.Client exposing [Client]
 import pg.Pg.Cmd
-import pg.Pg.BasicCliClient
 import pg.Pg.Result
 
-dbConfig = {
+Model : { client : Client }
+
+db_config = {
     host: "localhost",
     port: 5432,
     user: "postgres",
+    auth: None,
     database: "postgres",
 }
 
-defaultTargetCount = 3
+default_target_count = 3
 
-allBalls = [
+all_balls = [
     { number: 1, image: "https://static.vecteezy.com/system/resources/previews/009/305/112/large_2x/billiard-balls-clipart-design-illustration-free-png.png" },
     { number: 2, image: "https://static.vecteezy.com/system/resources/previews/009/391/424/non_2x/billiard-balls-clipart-design-illustration-free-png.png" },
     { number: 3, image: "https://static.vecteezy.com/system/resources/previews/009/380/190/non_2x/billiard-balls-clipart-design-illustration-free-png.png" },
@@ -45,169 +46,110 @@ allBalls = [
     { number: 15, image: "https://static.vecteezy.com/system/resources/previews/009/398/161/large_2x/billiard-balls-clipart-design-illustration-free-png.png" },
 ]
 
-allBallNumbers = List.map allBalls .number
+all_ball_numbers = List.map(all_balls, |ball| ball.number)
 
-main = \req ->
-    url = Url.fromStr req.url
+init! = |_|
+    client = Pg.Client.connect!(db_config)?
+    Ok({ client })
 
-    when (req.method, urlSegments url) is
-        (Get, [""]) ->
-            generateBoolBalls url
+respond! = |request, model|
+    url = Url.from_str(request.uri)
+
+    when (request.method, url_segments(url)) is
+        (GET, [""]) ->
+            generate_pool_balls!(url, model.client)
 
         _ ->
-            respond404
+            Ok({ status: 404, headers: [], body: [] })
 
-urlSegments = \url ->
+url_segments = |url|
     url
     |> Url.path
-    |> Str.split "/"
-    |> List.dropFirst 1
+    |> Str.split_on("/")
+    |> List.drop_first(1)
 
-generateBoolBalls = \url ->
-    time <- Task.await getSeed
+generate_pool_balls! = |url, client|
+    seed_value = Num.to_u32(Utc.to_millis_since_epoch(Utc.now!({})))
 
-    targetCount = getTargetCount url
+    target_count = get_target_count(url)
 
     selection =
-        time
-        |> Random.seed
-        |> removeRandomFromList allBallNumbers (Num.toU64 targetCount)
-        |> getSelected allBallNumbers
-        |> List.sortAsc
+        Random.seed(seed_value)
+        |> remove_random_from_list(all_ball_numbers, Num.to_u64(target_count))
+        |> get_selected(all_ball_numbers)
+        |> List.sort_asc
 
-    {} <- selection
-        |> tupleifyFirst3
-        |> storeSelection
-        |> handlePgError
-        |> Task.await
+    _ = store_selection!(selection, client)
 
-    respond selection
+    Ok(response(selection))
 
-getSeed =
-    Utc.now
-    |> Task.map Utc.toMillisSinceEpoch
-    |> Task.map Num.toU32
-
-getTargetCount = \url ->
+get_target_count = |url|
     url
-    |> Url.queryParams
-    |> Dict.get "balls"
-    |> Result.try Str.toU32
-    |> Result.withDefault defaultTargetCount
+    |> Url.query_params
+    |> Dict.get("balls")
+    |> Result.try(Str.to_u32)
+    |> Result.with_default(default_target_count)
 
-removeRandomFromList = \state, remaining, targetCount ->
-    remainingCount = List.len remaining
-    selectedCount = List.len allBallNumbers - remainingCount
+remove_random_from_list = |state, remaining, target_count|
+    remaining_count = List.len(remaining)
+    selected_count = List.len(all_ball_numbers) - remaining_count
 
-    targetReached = selectedCount == targetCount
-    outOfBalls = remainingCount == 0
+    target_reached = selected_count == target_count
+    out_of_balls = remaining_count == 0
 
-    if targetReached || outOfBalls then
+    if target_reached or out_of_balls then
         remaining
     else
-        generator =
-            remaining
-            |> List.len
-            |> Num.toI32
-            |> Num.sub 1
-            |> Random.int 0
+        upper = Num.to_u32(remaining_count) - 1
+        generator = Random.bounded_u32(0, upper)
+        generation = generator(state)
+        index = generation.value
 
-        generation = generator state
+        when List.get(remaining, Num.to_u64(index)) is
+            Ok(ball) ->
+                new_remaining = List.drop_if(remaining, |x| x == ball)
 
-        index =
-            generation
-            |> .value
+                remove_random_from_list(generation.state, new_remaining, target_count)
 
-        ballResult = List.get remaining (Num.toU64 index)
+            Err(_) ->
+                crash("should never happen - out_of_balls guards")
 
-        when ballResult is
-            Ok ball ->
-                newRemaining = List.dropIf remaining (\x -> x == ball)
-                newState = generation.state
+get_selected = |remaining, original|
+    List.drop_if(original, |x| List.contains(remaining, x))
 
-                removeRandomFromList
-                    newState
-                    newRemaining
-                    targetCount
-
-            Err _ ->
-                crash "should never happen - outOfBalls guards"
-
-getSelected = \remaining, original ->
-    List.dropIf
-        original
-        (\x -> List.contains remaining x)
-
-tupleifyFirst3 = \selection ->
-    when selection is
-        [a, b, c] ->
-            Triplet (a, b, c)
-
-        _ ->
-            NotTriplet
-
-storeSelection = \selection ->
-    client <- Pg.BasicCliClient.withConnect dbConfig
-
-    when selection is
-        Triplet (a, b, c) ->
-            time <-
+store_selection! = |selection, client|
+    result =
+        when selection is
+            [a, b, c] ->
                 """
                 insert into selection (a, b, c)
                 values ($1, $2, $3)
                 returning time
                 """
                 |> Pg.Cmd.new
-                |> Pg.Cmd.bind [
-                    Pg.Cmd.u8 a,
-                    Pg.Cmd.u8 b,
-                    Pg.Cmd.u8 c,
-                ]
-                |> Pg.Cmd.expect1 (Pg.Result.str "time")
-                |> Pg.BasicCliClient.command client
-                |> Task.await
+                |> Pg.Cmd.bind([Pg.Cmd.u8(a), Pg.Cmd.u8(b), Pg.Cmd.u8(c)])
+                |> Pg.Cmd.expect1(Pg.Result.str("time"))
+                |> Pg.Client.command!(client)
+                |> Result.map_ok(|_time| {})
 
-            Stdout.line "Triplet stored at $(time)"
+            _ ->
+                Ok({})
 
-        NotTriplet ->
-            Stdout.line "non-triplet selection"
-
-handlePgError = \task ->
-    result <- Task.attempt task
     when result is
-        Ok _ ->
-            Task.ok {}
+        Ok(_) ->
+            Ok({})
 
-        Err (TcpPerformErr (PgErr err)) ->
-            {} <- err
-                |> Pg.BasicCliClient.errorToStr
-                |> Stderr.line
-                |> Task.await
+        Err(_) ->
+            Stderr.line!("failed to store selection")
 
-            Task.ok {}
+response = |ball_numbers| {
+    status: 200,
+    headers: [{ name: "Content-Type", value: "text/html; charset=utf-8" }],
+    body: get_response_body(ball_numbers),
+}
 
-        Err e ->
-            {} <- e
-                |> Inspect.toStr
-                |> Stderr.line
-                |> Task.await
-
-            Task.ok {}
-
-respond = \ballNumbers ->
-    Task.ok {
-        status: 200,
-        headers: [
-            {
-                name: "Content-Type",
-                value: Str.toUtf8 "text/html; charset=utf-8",
-            },
-        ],
-        body: getResponseBody ballNumbers,
-    }
-
-getResponseBody = \ballNumbers ->
-    ballDivs = List.map ballNumbers renderBall
+get_response_body = |ball_numbers|
+    ball_imgs = List.map(ball_numbers, render_ball)
 
     style =
         """
@@ -217,17 +159,15 @@ getResponseBody = \ballNumbers ->
         align-items: center;
         """
 
-    Html.html [] [
-        Html.body [Attribute.style style] ballDivs,
-    ]
+    Html.html([], [Html.body([Attribute.style(style)], ball_imgs)])
     |> Html.render
-    |> Str.toUtf8
+    |> Str.to_utf8
 
-renderBall = \ballNumber ->
-    maybeImage =
-        allBalls
-        |> List.findFirst \x -> x.number == ballNumber
-        |> Result.map \x -> x.image
+render_ball = |ball_number|
+    maybe_image =
+        all_balls
+        |> List.find_first(|ball| ball.number == ball_number)
+        |> Result.map_ok(|ball| ball.image)
 
     style =
         """
@@ -235,19 +175,9 @@ renderBall = \ballNumber ->
         padding: 10px;
         """
 
-    when maybeImage is
-        Ok image ->
-            Html.img [
-                Attribute.src image,
-                Attribute.style style,
-            ]
+    when maybe_image is
+        Ok(image) ->
+            Html.img([Attribute.src(image), Attribute.style(style)])
 
-        Err _ ->
-            crash "should never happen"
-
-respond404 =
-    Task.ok {
-        status: 404,
-        headers: [],
-        body: [],
-    }
+        Err(_) ->
+            crash("should never happen")

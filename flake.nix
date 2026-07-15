@@ -2,7 +2,7 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
-    roc.url = "github:roc-lang/roc";
+    roc.url = "github:roc-lang/roc/alpha4-rolling";
   };
 
   outputs = { nixpkgs, flake-utils, roc, ... }:

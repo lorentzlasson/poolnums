@@ -1,9 +1,20 @@
-# debian based
-FROM roclang/nightly-ubuntu-latest as builder
+# bookworm base so the built binary's glibc matches the postgres:15.5 runtime
+FROM debian:bookworm-slim as builder
+
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends curl ca-certificates build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN curl --fail --silent --show-error --location \
+    "https://github.com/roc-lang/roc/releases/download/alpha4-rolling/roc-linux_x86_64-alpha4-rolling.tar.gz" \
+    --output /roc.tar.gz \
+    && mkdir --parents /opt/roc \
+    && tar --extract --gzip --file /roc.tar.gz --directory /opt/roc --strip-components=1 \
+    && ln --symbolic /opt/roc/roc /usr/local/bin/roc
 
 COPY ./main.roc /main.roc
 
-RUN roc build /main.roc; exit 0 # ignore faulty compile warnings
+RUN roc build /main.roc --linker legacy
 
 FROM postgres:15.5 as run
 
