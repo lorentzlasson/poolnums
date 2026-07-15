@@ -1,11 +1,8 @@
-port := env_var_or_default("PORT", "8000")
-
 default:
     @just --list
 
-dev: db-up
-    until docker compose exec -T db pg_isready --quiet; do sleep 1; done
-    ROC_BASIC_WEBSERVER_PORT={{ port }} roc dev main.roc --linker legacy
+dev: db-start
+    roc dev main.roc --linker legacy
 
 check:
     roc check main.roc
@@ -16,28 +13,36 @@ fmt:
 build:
     roc build main.roc --linker legacy
 
-db-up:
-    docker compose up --detach db
+db-start:
+    ./scripts/init-postgres.sh
+    pg_ctl --log="$PGDATA/postgres.log" start || true
+
+db-stop:
+    pg_ctl stop || true
+
+db-destroy:
+    pg_ctl stop 2>/dev/null || true
+    rm --recursive --force "$PGDATA"
 
 db:
-    pgcli postgres://postgres@localhost:5432/postgres
+    pgcli "$DATABASE_URL"
+
+start: db-start
+    process-compose up --port $PC_PORT_NUM
+
+stop:
+    process-compose down --port $PC_PORT_NUM 2>/dev/null || true
 
 status:
     #!/usr/bin/env bash
-    if [ -n "$(docker compose ps --status running --quiet db)" ]; then
-      echo "db:  up"
-      echo "selections: $(docker compose exec -T db psql --username postgres --dbname postgres --tuples-only --no-align --command 'select count(*) from selection;' 2>/dev/null)"
+    if pg_ctl status >/dev/null 2>&1; then
+      echo "db:  up on ${DB_PORT}"
+      echo "selections: $(psql "$DATABASE_URL" --tuples-only --no-align --command 'select count(*) from selection;' 2>/dev/null)"
     else
       echo "db:  down"
     fi
-    code=$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 2 "http://127.0.0.1:{{ port }}/" 2>/dev/null)
-    if [ "$code" = "200" ]; then echo "app: up on {{ port }}"; else echo "app: down on {{ port }}"; fi
-
-docker-up:
-    docker compose up --build
-
-down:
-    docker compose down
+    code=$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 2 "http://localhost:${PORT}/" 2>/dev/null)
+    if [ "$code" = "200" ]; then echo "app: up on ${PORT}"; else echo "app: down on ${PORT}"; fi
 
 deploy:
     ./deploy.sh

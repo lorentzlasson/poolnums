@@ -8,6 +8,7 @@ app [Model, init!, respond!] {
 import pf.Stderr
 import pf.Utc
 import pf.Url
+import pf.Env
 import rand.Random
 import html.Html
 import html.Attribute
@@ -17,15 +18,12 @@ import pg.Pg.Result
 
 Model : { client : Client }
 
-db_config = {
-    host: "localhost",
-    port: 5432,
-    user: "postgres",
-    auth: None,
-    database: "postgres",
-}
-
 default_target_count = 3
+
+env_or! = |name, fallback|
+    when Env.var!(name) is
+        Ok(value) -> value
+        Err(_) -> fallback
 
 all_balls = [
     { number: 1, image: "https://static.vecteezy.com/system/resources/previews/009/305/112/large_2x/billiard-balls-clipart-design-illustration-free-png.png" },
@@ -49,7 +47,20 @@ all_balls = [
 all_ball_numbers = List.map(all_balls, |ball| ball.number)
 
 init! = |_|
-    client = Pg.Client.connect!(db_config)?
+    port =
+        env_or!("PGPORT", "5432")
+        |> Str.to_u16
+        |> Result.with_default(5432)
+
+    client = Pg.Client.connect!(
+        {
+            host: env_or!("PGHOST", "localhost"),
+            port,
+            user: env_or!("PGUSER", "postgres"),
+            auth: None,
+            database: env_or!("PGDATABASE", "postgres"),
+        },
+    )?
     Ok({ client })
 
 respond! = |request, model|

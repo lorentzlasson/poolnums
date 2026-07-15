@@ -1,0 +1,14 @@
+version: "0.5"
+
+processes:
+  server:
+    command: roc dev main.roc --linker legacy
+    availability:
+      restart: on_failure
+    readiness_probe:
+      http_get:
+        host: localhost
+        port: ${PORT}
+        path: /
+      initial_delay_seconds: 2
+      period_seconds: 5

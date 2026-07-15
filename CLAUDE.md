@@ -8,20 +8,21 @@ A single-file [Roc](https://www.roc-lang.org/) web app that renders random pool 
 
 ## Commands
 
-The Nix dev shell (`flake.nix`, auto-loaded via direnv) provides `roc` and `pgcli`. The compiler is pinned to Roc's `alpha4-rolling` release (the last Rust-compiler line; the newer Zig compiler has no webserver platform yet).
+The Nix dev shell (`flake.nix`, auto-loaded via direnv) provides `roc`, `pgcli`, `postgresql`, `process-compose`, and `just`. The compiler is pinned to Roc's `alpha4-rolling` release (the last Rust-compiler line; the newer Zig compiler has no webserver platform yet). Local dev is Docker-free: Postgres runs via `pg_ctl` and the server via `process-compose`. Ports come from `.envrc` (non-standard: app `8420`, db `5440`).
 
-- `roc dev main.roc --linker legacy` — build and run the server locally (defaults to `127.0.0.1:8000`). The `--linker legacy` flag is required: alpha4's surgical linker fails on this platform.
-- `roc build main.roc --linker legacy` — produce the `main` binary
-- `roc check main.roc` — typecheck without building
-- `roc format main.roc` — format
-- `docker compose up` — run the app + a Postgres db together
-- `./deploy.sh` — build image, push to `rymdkraftverk/poolnums`, trigger Render deploy (needs `.env` with `DEPLOY_URL`)
+Common tasks go through the `justfile` (`just` to list):
 
-Postgres must be reachable at `localhost:5432` before the server starts — it connects once at boot (see below), so run `docker compose up db` first for local `roc dev`.
+- `just start` — start Postgres (`db-start`) then run the server under `process-compose`
+- `just dev` — start Postgres then run `roc dev` in the foreground
+- `just db-start` / `just db-stop` / `just db-destroy` — manage the local Postgres cluster (`.postgres-data`)
+- `just db` — `pgcli` shell into the local database
+- `just status` — show db / app / stored-selection-count
+- `just check` / `just fmt` / `just build` — `roc check` / `roc format` / `roc build --linker legacy`
+- `just deploy` — build the image, push to `rymdkraftverk/poolnums`, trigger the Render deploy (needs `.env` with `DEPLOY_URL`)
 
-There are no tests.
+`--linker legacy` is required everywhere `roc build`/`roc dev` runs: alpha4's surgical linker fails on this platform. There are no tests.
 
-Server env vars (from `basic-webserver`): `ROC_BASIC_WEBSERVER_HOST` (Dockerfile sets `0.0.0.0`), `ROC_BASIC_WEBSERVER_PORT` (default 8000).
+The server connects to Postgres at boot, so the db must be up first (`just start`/`just dev` handle the ordering). Server env vars (from `basic-webserver`): `ROC_BASIC_WEBSERVER_HOST` (Dockerfile sets `0.0.0.0`), `ROC_BASIC_WEBSERVER_PORT` (`.envrc` sets it to `$PORT`).
 
 ## Architecture
 
@@ -37,14 +38,12 @@ Request flow (`generate_pool_balls!`):
 
 ### Data & Postgres
 
-- `schema.sql` defines the single `selection` table (`time, a, b, c`).
-- `db_config` is hardcoded to `localhost:5432` / user+db `postgres`. This works in production because the Docker image runs Postgres **inside the same container** as the app (see below). For local `roc dev`, you need Postgres listening on `localhost:5432` with the schema loaded (e.g. `docker compose up db`).
+- `schema.sql` defines the single `selection` table (`time, a, b, c`). It is loaded by `scripts/init-postgres.sh` locally, and mounted as a Docker init script in production.
+- `init!` reads the connection from the standard libpq env vars `PGHOST` / `PGPORT` / `PGUSER` / `PGDATABASE`, each defaulting to `localhost` / `5432` / `postgres` / `postgres`. Locally, `.envrc` points `PGPORT` at `5440`; in production nothing is set, so the defaults hit the Postgres running **inside the same container** (see below).
 
 ### Deployment packaging
 
-The `Dockerfile` is a two-stage build: stage one is `debian:bookworm-slim` which downloads the pinned `alpha4-rolling` Roc release binary and runs `roc build /main.roc --linker legacy`; stage two is `postgres:15.5` with the compiled binary and `schema.sql` copied in. Bookworm is used as the builder base so the binary's glibc matches the `postgres:15.5` runtime. `docker-start.sh` boots Postgres in the background (via `docker-entrypoint.sh`), waits for `pg_isready` (the app connects at startup, so this avoids a boot race), then runs `./main` in the foreground — so one container serves both the DB and the web app. `schema.sql` is mounted as an init script, so the table is created on first boot.
-
-Note `compose.yaml` instead runs a *separate* `db` service; the `poolnums` service's own bundled Postgres goes unused there since `db_config` still points at `localhost`.
+Deployment still uses Docker (only local dev is Docker-free). The `Dockerfile` is a two-stage build: stage one is `debian:bookworm-slim` which downloads the pinned `alpha4-rolling` Roc release binary and runs `roc build /main.roc --linker legacy`; stage two is `postgres:15.5` with the compiled binary and `schema.sql` copied in. Bookworm is used as the builder base so the binary's glibc matches the `postgres:15.5` runtime. `docker-start.sh` boots Postgres in the background (via `docker-entrypoint.sh`), waits for `pg_isready` (the app connects at startup, so this avoids a boot race), then runs `./main` in the foreground — so one container serves both the DB and the web app. `schema.sql` is mounted as an init script, so the table is created on first boot.
 
 ## Conventions
 
