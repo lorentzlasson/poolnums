@@ -12,17 +12,17 @@ The Nix dev shell (`flake.nix`, auto-loaded via direnv) provides `roc`, `pgcli`,
 
 Common tasks go through the `justfile` (`just` to list):
 
-- `just start` — start Postgres (`db-start`) then run the server under `process-compose`
-- `just dev` — start Postgres then run `roc dev` in the foreground
+- `just start` — start Postgres (`db-start`), bring the server up under `process-compose` (detached), then follow its logs
+- `just stop` — stop the `process-compose` services
+- `just status` / `just log [service]` — process-compose status / follow logs
 - `just db-start` / `just db-stop` / `just db-destroy` — manage the local Postgres cluster (`.postgres-data`)
 - `just db` — `pgcli` shell into the local database
-- `just status` — show db / app / stored-selection-count
 - `just check` / `just fmt` / `just build` — `roc check` / `roc format` / `roc build --linker legacy`
 - `just deploy` — build the image, push to `rymdkraftverk/poolnums`, trigger the Render deploy (needs `.env` with `DEPLOY_URL`)
 
 `--linker legacy` is required everywhere `roc build`/`roc dev` runs: alpha4's surgical linker fails on this platform. There are no tests.
 
-The server connects to Postgres at boot, so the db must be up first (`just start`/`just dev` handle the ordering). Server env vars (from `basic-webserver`): `ROC_BASIC_WEBSERVER_HOST` (Dockerfile sets `0.0.0.0`), `ROC_BASIC_WEBSERVER_PORT` (`.envrc` sets it to `$PORT`).
+The server connects to Postgres at boot, so the db must be up first (`just start` depends on `db-start`, handling the ordering). Server env vars (from `basic-webserver`): `ROC_BASIC_WEBSERVER_HOST` (Dockerfile sets `0.0.0.0`), `ROC_BASIC_WEBSERVER_PORT` (`.envrc` sets it to `$PORT`).
 
 ## Architecture
 

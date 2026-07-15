@@ -25,6 +25,7 @@
                 rocFull # includes CLI
                 pkgs.pgcli
                 pkgs.just
+                pkgs.jq
                 pkgs.postgresql_15
                 pkgs.process-compose
               ];
