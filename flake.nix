@@ -24,6 +24,7 @@
               [
                 rocFull # includes CLI
                 pkgs.pgcli
+                pkgs.just
               ];
           };
         };
