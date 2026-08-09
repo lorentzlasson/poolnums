@@ -25,4 +25,6 @@ ENV ROC_BASIC_WEBSERVER_HOST=0.0.0.0
 COPY ./schema.sql /docker-entrypoint-initdb.d/1-schema.sql
 COPY ./docker-start.sh /
 
+USER postgres
+
 CMD ./docker-start.sh
