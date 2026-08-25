@@ -4,11 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A single-file [Roc](https://www.roc-lang.org/) web app that renders random pool balls as an HTML page. Built on the `basic-webserver` platform; persists selections to Postgres via `roc-pg`. Deployed on Render (https://poolnums.onrender.com/).
+A single-file [Roc](https://www.roc-lang.org/) web app that renders random pool balls as an HTML page. Built on the `basic-webserver` platform; persists selections to Postgres via `roc-pg`. Deployed on Fogpipe Cloud (https://poolnums.fogpipe.cloud/).
 
 ## Commands
 
-The Nix dev shell (`flake.nix`, auto-loaded via direnv) provides `roc`, `pgcli`, `postgresql`, `process-compose`, and `just`. The compiler is pinned to Roc's `alpha4-rolling` release (the last Rust-compiler line; the newer Zig compiler has no webserver platform yet). Local dev is Docker-free: Postgres runs via `pg_ctl` and the server via `process-compose`. Ports come from `.envrc` (non-standard: app `8420`, db `5440`).
+The Nix dev shell (`flake.nix`, auto-loaded via direnv) provides `roc`, `pgcli`, `postgresql`, `process-compose`, `just`, and the `fpcloud` CLI. The compiler is pinned to Roc's `alpha4-rolling` release (the last Rust-compiler line; the newer Zig compiler has no webserver platform yet). Local dev is Docker-free: Postgres runs via `pg_ctl` and the server via `process-compose`. Ports come from `.envrc` (non-standard: app `8420`, db `5440`).
 
 Common tasks go through the `justfile` (`just` to list):
 
@@ -18,7 +18,7 @@ Common tasks go through the `justfile` (`just` to list):
 - `just db-start` / `just db-stop` / `just db-destroy` — manage the local Postgres cluster (`.postgres-data`)
 - `just db` — `pgcli` shell into the local database
 - `just check` / `just fmt` / `just build` — `roc check` / `roc format` / `roc build --linker legacy`
-- `just deploy` — build the image, push to `rymdkraftverk/poolnums`, trigger the Render deploy (needs `.env` with `DEPLOY_URL`)
+- `just deploy` — build the image, push it to the Fogpipe registry and roll out the new revision (needs `fpcloud login` once)
 
 `--linker legacy` is required everywhere `roc build`/`roc dev` runs: alpha4's surgical linker fails on this platform. There are no tests.
 
@@ -44,6 +44,12 @@ Request flow (`generate_pool_balls!`):
 ### Deployment packaging
 
 Deployment still uses Docker (only local dev is Docker-free). The `Dockerfile` is a two-stage build: stage one is `debian:bookworm-slim` which downloads the pinned `alpha4-rolling` Roc release binary and runs `roc build /main.roc --linker legacy`; stage two is `postgres:15.5` with the compiled binary and `schema.sql` copied in. Bookworm is used as the builder base so the binary's glibc matches the `postgres:15.5` runtime. `docker-start.sh` boots Postgres in the background (via `docker-entrypoint.sh`), waits for `pg_isready` (the app connects at startup, so this avoids a boot race), then runs `./main` in the foreground — so one container serves both the DB and the web app. `schema.sql` is mounted as an init script, so the table is created on first boot.
+
+### Fogpipe Cloud
+
+The app runs as the `poolnums` app in the `poolnums` project of the `rymdkraftverk` org, on port `8000`, health-checked on `/` (the only route it serves). `deploy.sh` builds the image, pushes it to `registry.cloud.fogpipe.com/rkv/poolnums/poolnums` — the org spelled as its short id, which is the only path the registry's token broker grants push on; the `rymdkraftverk/...` spelling the app's stored image uses is pullable but not pushable — tagged with the short commit sha, rolls it out with `fpcloud app deploy` and then waits until the app reports that image and the site answers 200. Auth is whatever `fpcloud login` left behind — the script refuses to run unauthenticated rather than half-deploying.
+
+The project has **no managed database and no persistent volume**: Postgres lives inside the app container on ephemeral storage, so stored selections do not survive a restart. Moving to the platform's managed Postgres is blocked on `roc-pg`, which implements only trust and cleartext password auth — the managed instances require SCRAM-SHA-256.
 
 ## Conventions
 

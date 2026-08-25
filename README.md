@@ -4,4 +4,4 @@ Web application generating random pool balls. Can be used in various pool game m
 
 3 balls are generated on each request by default but the number can be modified using the `balls` query param.
 
-Running on https://poolnums.onrender.com/
+Running on https://poolnums.fogpipe.cloud/
