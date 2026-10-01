@@ -53,5 +53,5 @@ The project has **no managed database and no persistent volume**: Postgres lives
 
 ## Conventions
 
-- Platform/library versions are pinned by URL+hash in the `app [...] { ... }` header of `main.roc`; the compiler is pinned in `flake.nix` (dev shell) and `Dockerfile` (release build). Bumping any of them means keeping all these pins in sync with a compatible set.
+- Platform/library versions are pinned by URL+hash in the `app [...] { ... }` header of `main.roc`; the compiler is pinned in `flake.nix`/`flake.lock` (dev shell) and by tarball sha256 in `Dockerfile` (release build), which must be the release asset built from the same commit `flake.lock` locks. Bumping any of them means keeping all these pins in sync with a compatible set.
 - `crash("should never happen")` is used at spots the surrounding logic proves unreachable — keep those invariants intact when editing.
