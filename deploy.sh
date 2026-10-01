@@ -29,22 +29,8 @@ echo "==> building ${tag}"
 fp registry login
 docker build --platform linux/amd64 --file Dockerfile --tag "$tag" .
 
-# The registry hands docker a push-scoped token that expires after 300s, while
-# the credential from `registry login` stays valid for an hour. This image is
-# large enough that the manifest PUT can go out after that token has expired,
-# which surfaces as `unauthorized` on an otherwise fine credential. A retry
-# opens a fresh push session and finds every layer already uploaded.
 echo "==> pushing"
-for attempt in 1 2 3; do
-  docker push "$tag" && break
-  if [ "$attempt" = 3 ]; then
-    echo "push failed after 3 attempts: $tag" >&2
-    exit 1
-  fi
-  echo "push failed (attempt ${attempt}/3), retrying" >&2
-  fp registry login >/dev/null
-  sleep 3
-done
+docker push "$tag"
 
 echo "==> deploying"
 fp app deploy "$APP" --image "$tag" --release "$sha"

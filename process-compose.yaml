@@ -2,7 +2,7 @@ version: "0.5"
 
 processes:
   server:
-    command: roc dev main.roc --linker legacy
+    command: roc main.roc
     availability:
       restart: on_failure
     readiness_probe:

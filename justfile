@@ -1,11 +1,8 @@
 default:
     @just --list
 
-[private]
-_ensure-services: db-start
+start:
     ./scripts/start-services.sh
-
-start: _ensure-services
     ./scripts/log.sh
 
 stop:
@@ -23,22 +20,9 @@ check:
 fmt:
     roc format main.roc
 
+# exit code 2 means the build succeeded with warnings
 build:
-    roc build main.roc --linker legacy
-
-db:
-    pgcli "$DATABASE_URL"
-
-db-start:
-    ./scripts/init-postgres.sh
-    pg_ctl --log="$PGDATA/postgres.log" start || true
-
-db-stop:
-    pg_ctl stop || true
-
-db-destroy:
-    pg_ctl stop 2>/dev/null || true
-    rm --recursive --force "$PGDATA"
+    roc build main.roc || [ $? -eq 2 ]
 
 deploy:
     ./deploy.sh

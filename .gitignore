@@ -9,4 +9,3 @@ tmp
 lab.roc
 .env
 .direnv
-.postgres-data

@@ -10,12 +10,6 @@ fi
 
 echo "✓ process-compose (:$PC_PORT_NUM)"
 
-if pg_isready --quiet --dbname="$DATABASE_URL" 2>/dev/null; then
-    echo "✓ db (:$DB_PORT)"
-else
-    echo "✗ db (:$DB_PORT)"
-fi
-
 echo "$services" | jq --raw-output '.[] | .name + " " + .is_ready + " " + .status' | while read -r name ready status; do
     case "$name" in
         server) port="$PORT" ;;

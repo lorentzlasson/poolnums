@@ -1,194 +1,137 @@
-app [Model, init!, respond!] {
-    pf: platform "https://github.com/roc-lang/basic-webserver/releases/download/0.13.1/7P4PF5rntQVkys5JbIHqkMpZIXo-pxa5lVqOdh7z8fE.tar.br",
-    rand: "https://github.com/lukewilliamboswell/roc-random/releases/download/0.5.0/yDUoWipuyNeJ-euaij4w_ozQCWtxCsywj68H0PlJAdE.tar.br",
-    html: "https://github.com/Hasnep/roc-html/releases/download/v0.8.0/GCTX3ckGRXs29XkLh0rhp0a6l0IrUe5RgAFj83hwN3Q.tar.br",
-    pg: "https://github.com/agu-z/roc-pg/releases/download/0.1.1/PjwASOJalDKErbHkj3bXskhGbgqGzVSbki4Nv7xOEe0.tar.br",
+app [Context, program] {
+	pf: platform "https://github.com/roc-lang/basic-webserver/releases/download/0.16.0/42jC1JT3auhHSmv2Ah8mW5F2MXiAakq1UQQ4NQceQjXw.tar.zst",
+	http: "https://github.com/roc-lang/http/releases/download/1.0.0/6ZUwqYhCS8PU9Mo6MF7oV82ET2o7KYb57CLKDq4cq4sS.tar.zst",
+	rand: "https://github.com/kili-ilo/roc-random/releases/download/0.9.2/2ZXLX8WRqrosGu1V3VL5aXqgtfTRvJmjFPx8a26ecVmc.tar.zst",
+	roc: "nightly-2026-09-29-7f11a82",
 }
 
-import pf.Stderr
-import pf.Utc
-import pf.Url
 import pf.Env
+import pf.Server
+import pf.UnixTime
+import pf.Html
+import pf.Attribute
+import http.Response
 import rand.Random
-import html.Html
-import html.Attribute
-import pg.Pg.Client exposing [Client]
-import pg.Pg.Cmd
-import pg.Pg.Result
 
-Model : { client : Client }
+Context : {}
 
+program = { init!, respond!, shutdown! }
+
+default_target_count : U64
 default_target_count = 3
 
-env_or! = |name, fallback|
-    when Env.var!(name) is
-        Ok(value) -> value
-        Err(_) -> fallback
-
 all_balls = [
-    { number: 1, image: "https://static.vecteezy.com/system/resources/previews/009/305/112/large_2x/billiard-balls-clipart-design-illustration-free-png.png" },
-    { number: 2, image: "https://static.vecteezy.com/system/resources/previews/009/391/424/non_2x/billiard-balls-clipart-design-illustration-free-png.png" },
-    { number: 3, image: "https://static.vecteezy.com/system/resources/previews/009/380/190/non_2x/billiard-balls-clipart-design-illustration-free-png.png" },
-    { number: 4, image: "https://static.vecteezy.com/system/resources/previews/009/383/768/non_2x/billiard-balls-clipart-design-illustration-free-png.png" },
-    { number: 5, image: "https://static.vecteezy.com/system/resources/previews/009/380/189/non_2x/billiard-balls-clipart-design-illustration-free-png.png" },
-    { number: 6, image: "https://static.vecteezy.com/system/resources/previews/009/380/385/non_2x/billiard-balls-clipart-design-illustration-free-png.png" },
-    { number: 7, image: "https://static.vecteezy.com/system/resources/previews/009/398/873/large_2x/billiard-balls-clipart-design-illustration-free-png.png" },
-    { number: 8, image: "https://static.vecteezy.com/system/resources/previews/009/384/622/non_2x/billiard-balls-clipart-design-illustration-free-png.png" },
-    { number: 9, image: "https://static.vecteezy.com/system/resources/previews/009/381/024/non_2x/billiard-balls-clipart-design-illustration-free-png.png" },
-    { number: 10, image: "https://static.vecteezy.com/system/resources/previews/009/385/468/non_2x/billiard-balls-clipart-design-illustration-free-png.png" },
-    { number: 11, image: "https://static.vecteezy.com/system/resources/previews/009/383/774/non_2x/billiard-balls-clipart-design-illustration-free-png.png" },
-    # TODO: number 12 is not in same style
-    { number: 12, image: "https://static.vecteezy.com/system/resources/previews/021/080/770/large_2x/pool-ball-design-illustration-isolated-on-transparent-background-free-png.png" },
-    { number: 13, image: "https://static.vecteezy.com/system/resources/previews/009/385/377/non_2x/billiard-balls-clipart-design-illustration-free-png.png" },
-    { number: 14, image: "https://static.vecteezy.com/system/resources/previews/009/391/555/non_2x/billiard-balls-clipart-design-illustration-free-png.png" },
-    { number: 15, image: "https://static.vecteezy.com/system/resources/previews/009/398/161/large_2x/billiard-balls-clipart-design-illustration-free-png.png" },
+	{ number: 1, image: "https://static.vecteezy.com/system/resources/previews/009/305/112/large_2x/billiard-balls-clipart-design-illustration-free-png.png" },
+	{ number: 2, image: "https://static.vecteezy.com/system/resources/previews/009/391/424/non_2x/billiard-balls-clipart-design-illustration-free-png.png" },
+	{ number: 3, image: "https://static.vecteezy.com/system/resources/previews/009/380/190/non_2x/billiard-balls-clipart-design-illustration-free-png.png" },
+	{ number: 4, image: "https://static.vecteezy.com/system/resources/previews/009/383/768/non_2x/billiard-balls-clipart-design-illustration-free-png.png" },
+	{ number: 5, image: "https://static.vecteezy.com/system/resources/previews/009/380/189/non_2x/billiard-balls-clipart-design-illustration-free-png.png" },
+	{ number: 6, image: "https://static.vecteezy.com/system/resources/previews/009/380/385/non_2x/billiard-balls-clipart-design-illustration-free-png.png" },
+	{ number: 7, image: "https://static.vecteezy.com/system/resources/previews/009/398/873/large_2x/billiard-balls-clipart-design-illustration-free-png.png" },
+	{ number: 8, image: "https://static.vecteezy.com/system/resources/previews/009/384/622/non_2x/billiard-balls-clipart-design-illustration-free-png.png" },
+	{ number: 9, image: "https://static.vecteezy.com/system/resources/previews/009/381/024/non_2x/billiard-balls-clipart-design-illustration-free-png.png" },
+	{ number: 10, image: "https://static.vecteezy.com/system/resources/previews/009/385/468/non_2x/billiard-balls-clipart-design-illustration-free-png.png" },
+	{ number: 11, image: "https://static.vecteezy.com/system/resources/previews/009/383/774/non_2x/billiard-balls-clipart-design-illustration-free-png.png" },
+	# TODO: number 12 is not in same style
+	{ number: 12, image: "https://static.vecteezy.com/system/resources/previews/021/080/770/large_2x/pool-ball-design-illustration-isolated-on-transparent-background-free-png.png" },
+	{ number: 13, image: "https://static.vecteezy.com/system/resources/previews/009/385/377/non_2x/billiard-balls-clipart-design-illustration-free-png.png" },
+	{ number: 14, image: "https://static.vecteezy.com/system/resources/previews/009/391/555/non_2x/billiard-balls-clipart-design-illustration-free-png.png" },
+	{ number: 15, image: "https://static.vecteezy.com/system/resources/previews/009/398/161/large_2x/billiard-balls-clipart-design-illustration-free-png.png" },
 ]
 
-all_ball_numbers = List.map(all_balls, |ball| ball.number)
-
-init! = |_|
-    port =
-        env_or!("PGPORT", "5432")
-        |> Str.to_u16
-        |> Result.with_default(5432)
-
-    client = Pg.Client.connect!(
-        {
-            host: env_or!("PGHOST", "localhost"),
-            port,
-            user: env_or!("PGUSER", "postgres"),
-            auth: None,
-            database: env_or!("PGDATABASE", "postgres"),
-        },
-    )?
-    Ok({ client })
-
-respond! = |request, model|
-    url = Url.from_str(request.uri)
-
-    when (request.method, url_segments(url)) is
-        (GET, [""]) ->
-            generate_pool_balls!(url, model.client)
-
-        _ ->
-            Ok({ status: 404, headers: [], body: [] })
-
-url_segments = |url|
-    url
-    |> Url.path
-    |> Str.split_on("/")
-    |> List.drop_first(1)
-
-generate_pool_balls! = |url, client|
-    seed_value = Num.to_u32(Utc.to_millis_since_epoch(Utc.now!({})))
-
-    target_count = get_target_count(url)
-
-    selection =
-        Random.seed(seed_value)
-        |> remove_random_from_list(all_ball_numbers, Num.to_u64(target_count))
-        |> get_selected(all_ball_numbers)
-        |> List.sort_asc
-
-    _ = store_selection!(selection, client)
-
-    Ok(response(selection))
-
-get_target_count = |url|
-    url
-    |> Url.query_params
-    |> Dict.get("balls")
-    |> Result.try(Str.to_u32)
-    |> Result.with_default(default_target_count)
-
-remove_random_from_list = |state, remaining, target_count|
-    remaining_count = List.len(remaining)
-    selected_count = List.len(all_ball_numbers) - remaining_count
-
-    target_reached = selected_count == target_count
-    out_of_balls = remaining_count == 0
-
-    if target_reached or out_of_balls then
-        remaining
-    else
-        upper = Num.to_u32(remaining_count) - 1
-        generator = Random.bounded_u32(0, upper)
-        generation = generator(state)
-        index = generation.value
-
-        when List.get(remaining, Num.to_u64(index)) is
-            Ok(ball) ->
-                new_remaining = List.drop_if(remaining, |x| x == ball)
-
-                remove_random_from_list(generation.state, new_remaining, target_count)
-
-            Err(_) ->
-                crash("should never happen - out_of_balls guards")
-
-get_selected = |remaining, original|
-    List.drop_if(original, |x| List.contains(remaining, x))
-
-store_selection! = |selection, client|
-    result =
-        when selection is
-            [a, b, c] ->
-                """
-                insert into selection (a, b, c)
-                values ($1, $2, $3)
-                returning time
-                """
-                |> Pg.Cmd.new
-                |> Pg.Cmd.bind([Pg.Cmd.u8(a), Pg.Cmd.u8(b), Pg.Cmd.u8(c)])
-                |> Pg.Cmd.expect1(Pg.Result.str("time"))
-                |> Pg.Client.command!(client)
-                |> Result.map_ok(|_time| {})
-
-            _ ->
-                Ok({})
-
-    when result is
-        Ok(_) ->
-            Ok({})
-
-        Err(_) ->
-            Stderr.line!("failed to store selection")
-
-response = |ball_numbers| {
-    status: 200,
-    headers: [{ name: "Content-Type", value: "text/html; charset=utf-8" }],
-    body: get_response_body(ball_numbers),
+init! : () => Try({ config : Server.Config, context : Context }, [Exit(I64)])
+init! = || {
+	host =
+		match Env.var_str!("HOST") {
+			Ok(value) => value
+			_ => "127.0.0.1"
+		}
+	port =
+		match Env.var_str!("PORT") {
+			Ok(value) => U16.from_str(value) ? |_| Exit(1)
+			_ => 8000
+		}
+	Ok({ config: Server.default_config.with_listen({ host, port }), context: {} })
 }
 
-get_response_body = |ball_numbers|
-    ball_imgs = List.map(ball_numbers, render_ball)
+respond! : Server.Request, Context => Try(Server.Outcome, [ServerErr(Str)])
+respond! = |request, _context|
+	match (request.method(), request.target()) {
+		(GET, Resource({ raw_path: "/", raw_query, .. })) => Ok(Server.respond(generate_pool_balls!(raw_query)))
+		_ => Ok(Server.respond(Response.from_status(404)))
+	}
 
-    style =
-        """
-        background: #117f38;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        """
+shutdown! : Server.ShutdownReason, Context => Try({}, [Exit(I64)])
+shutdown! = |_reason, _context| Ok({})
 
-    Html.html([], [Html.body([Attribute.style(style)], ball_imgs)])
-    |> Html.render
-    |> Str.to_utf8
+generate_pool_balls! = |raw_query| {
+	seed = Random.seed(UnixTime.now!().subsecond_nanoseconds())
 
-render_ball = |ball_number|
-    maybe_image =
-        all_balls
-        |> List.find_first(|ball| ball.number == ball_number)
-        |> Result.map_ok(|ball| ball.image)
+	remaining = remove_random_from_list(seed, all_balls, get_target_count(raw_query))
+	selection = get_selected(remaining, all_balls)
 
-    style =
-        """
-        max-height: 25vh;
-        padding: 10px;
-        """
+	response(selection)
+}
 
-    when maybe_image is
-        Ok(image) ->
-            Html.img([Attribute.src(image), Attribute.style(style)])
+get_target_count = |raw_query|
+	match raw_query {
+		Present(query) =>
+			match query.split_on("&").find_first(|param| param.starts_with("balls=")) {
+				Ok(param) => U64.from_str(param.drop_prefix("balls=")).ok_or(default_target_count)
+				Err(NotFound) => default_target_count
+			}
+		Absent => default_target_count
+	}
 
-        Err(_) ->
-            crash("should never happen")
+remove_random_from_list = |state, remaining, target_count| {
+	remaining_count = remaining.len()
+	selected_count = all_balls.len() - remaining_count
+
+	target_reached = selected_count == target_count
+	out_of_balls = remaining_count == 0
+
+	if target_reached or out_of_balls {
+		remaining
+	} else {
+		generation = Random.step(state, Random.bounded_u32(0, remaining_count.to_u32_wrap() - 1))
+
+		match remaining.get(generation.value.to_u64()) {
+			Ok(ball) => {
+				new_remaining = remaining.drop_if(|x| x == ball)
+
+				remove_random_from_list(generation.state, new_remaining, target_count)
+			}
+			Err(_) => {
+				crash "should never happen - out_of_balls guards"
+			}
+		}
+	}
+}
+
+get_selected = |remaining, original|
+	original.drop_if(|x| remaining.contains(x))
+
+response = |balls|
+	Response.from_status(200)
+		.with_headers([{ name: "Content-Type", value: "text/html; charset=utf-8" }])
+		.with_body(get_response_body(balls))
+
+get_response_body = |balls| {
+	ball_imgs = balls.map(render_ball)
+
+	style =
+		\\background: #117f38;
+		\\display: flex;
+		\\flex-direction: column;
+		\\align-items: center;
+
+	Str.to_utf8(Html.render(Html.html([], [Html.body([Attribute.style(style)], ball_imgs)])))
+}
+
+render_ball = |ball| {
+	style =
+		\\max-height: 25vh;
+		\\padding: 10px;
+
+	Html.void_element("img", [Attribute.src(ball.image), Attribute.style(style)])
+}
