@@ -118,6 +118,7 @@ response = |balls|
 
 get_response_body = |balls| {
 	ball_imgs = balls.map(render_ball)
+	controls = render_controls(balls.len())
 
 	style =
 		\\background: #117f38;
@@ -125,7 +126,37 @@ get_response_body = |balls| {
 		\\flex-direction: column;
 		\\align-items: center;
 
-	Str.to_utf8(Html.render(Html.html([], [Html.body([Attribute.style(style)], ball_imgs)])))
+	Str.to_utf8(Html.render(Html.html([], [Html.body([Attribute.style(style)], controls.concat(ball_imgs))])))
+}
+
+render_controls = |count| {
+	decrement = if count > 1 {
+		Link(count - 1)
+	} else {
+		Disabled
+	}
+	increment = if count < all_balls.len() {
+		Link(count + 1)
+	} else {
+		Disabled
+	}
+
+	[render_control("−", "left: 0;", decrement), render_control("+", "right: 0;", increment)]
+}
+
+render_control = |label, corner, target| {
+	style =
+		\\position: fixed;
+		\\top: 0;
+		\\padding: 8px 32px;
+		\\font: bold 96px/1 sans-serif;
+		\\color: white;
+		\\text-decoration: none;
+
+	match target {
+		Link(count) => Html.a([Attribute.href("?balls=${count.to_str()}"), Attribute.style("${style}${corner}")], [Html.text(label)])
+		Disabled => Html.span([Attribute.style("${style}${corner}opacity: 0.3;")], [Html.text(label)])
+	}
 }
 
 render_ball = |ball| {

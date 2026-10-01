@@ -31,7 +31,7 @@ Request flow (`generate_pool_balls!`):
 1. Seed `roc-random` from the current sub-second nanoseconds.
 2. `remove_random_from_list` works by *elimination*: it starts from all 15 balls and randomly drops balls until `15 - target_count` remain; `get_selected` then returns the dropped ones as the selection. Count comes from the `?balls=` query param (`default_target_count = 3`).
 
-`all_balls` pairs each ball number with an external image URL; `render_ball` emits an `<img>` for it via the platform's `Html` module.
+`all_balls` pairs each ball number with an external image URL; `render_ball` emits an `<img>` for it via the platform's `Html` module. `render_controls` pins −/+ links to the top corners, pointing at `?balls=` one lower/higher, bounded to 1–15.
 
 ### Deployment packaging
 
