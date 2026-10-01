@@ -26,3 +26,6 @@ build:
 
 deploy:
     ./deploy.sh
+
+fpcloud-update:
+    ./scripts/update-fpcloud.sh

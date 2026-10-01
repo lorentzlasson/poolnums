@@ -8,19 +8,14 @@ PROJECT=poolnums
 APP=poolnums
 URL=https://poolnums.fogpipe.cloud
 
-# The registry path spells the org as its short id, not its name. The token
-# broker grants push on `rkv/poolnums/poolnums` and grants an empty scope on
-# `rymdkraftverk/poolnums/poolnums`, which docker reports as `unauthorized` —
-# indistinguishable from a bad credential. Pulls are unaffected either way,
-# since the kubelet pulls with an operator credential that resolves nothing.
-IMAGE="registry.cloud.fogpipe.com/rkv/${PROJECT}/${APP}"
-
 fp() { fpcloud "$@" --org "$ORG" --project "$PROJECT"; }
 
-if ! fp auth status >/dev/null 2>&1; then
+if ! fp context --output json | jq --exit-status '.identity != ""' >/dev/null; then
   echo "not authenticated — run: fpcloud login" >&2
   exit 1
 fi
+
+IMAGE=$(fp registry repo-path "$APP")
 
 sha=$(git rev-parse --short HEAD)
 tag="${IMAGE}:${sha}"
@@ -39,7 +34,7 @@ fp app deploy "$APP" --image "$tag" --release "$sha"
 # image the app reports back is the one just pushed.
 echo "==> verifying"
 for attempt in $(seq 1 30); do
-  live=$(fp app version "$APP" --output json | sed -n '/^{/,$p' | jq --raw-output '.image')
+  live=$(fp app version "$APP" --output json | jq --raw-output '.image')
   if [ "$live" = "$tag" ]; then
     code=$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 10 "$URL/")
     if [ "$code" = 200 ]; then

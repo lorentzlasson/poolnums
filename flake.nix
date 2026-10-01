@@ -2,7 +2,7 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
-    cloud-cli.url = "github:fogpipe/cloud-cli";
+    cloud-cli.url = "github:fogpipe/cloud-cli/release";
   };
 
   outputs = { nixpkgs, flake-utils, cloud-cli, ... }:

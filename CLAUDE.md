@@ -17,6 +17,7 @@ Common tasks go through the `justfile` (`just` to list):
 - `just status` / `just log [service]` — process-compose status / follow logs
 - `just check` / `just fmt` / `just build` — `roc check` / `roc fmt` / `roc build`
 - `just deploy` — build the image, push it to the Fogpipe registry and roll out the new revision (needs `fpcloud login` once)
+- `just fpcloud-update` — move `fpcloud` to the platform's latest release and commit the lock bump
 
 `roc build` exits `2` when it succeeds with warnings. The pinned platform release emits such warnings under current nightlies, so build steps treat `2` as success. There are no tests.
 
@@ -38,7 +39,7 @@ The `Dockerfile` is a two-stage build: stage one downloads the pinned nightly Ro
 
 ### Fogpipe Cloud
 
-The app runs as the `poolnums` app in the `poolnums` project of the `rymdkraftverk` org, on port `8000`, health-checked on `/` (the only route it serves). `deploy.sh` builds the image, pushes it to `registry.cloud.fogpipe.com/rkv/poolnums/poolnums` — the org spelled as its short id, which is the only path the registry's token broker grants push on; the `rymdkraftverk/...` spelling the app's stored image uses is pullable but not pushable — tagged with the short commit sha, rolls it out with `fpcloud app deploy` and then waits until the app reports that image and the site answers 200. Auth is whatever `fpcloud login` left behind — the script refuses to run unauthenticated rather than half-deploying.
+The app runs as the `poolnums` app in the `poolnums` project of the `rymdkraftverk` org, on port `8000`, health-checked on `/` (the only route it serves). `deploy.sh` builds the image, pushes it to the registry path `fpcloud registry repo-path` reports, tagged with the short commit sha, rolls it out with `fpcloud app deploy` and then waits until the app reports that image and the site answers 200. Auth is whatever `fpcloud login` left behind — the script refuses to run unauthenticated rather than half-deploying.
 
 ## Conventions
 
