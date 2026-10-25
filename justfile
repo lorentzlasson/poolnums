@@ -18,7 +18,7 @@ check:
     roc check main.roc
 
 fmt:
-    roc format main.roc
+    roc fmt main.roc
 
 # exit code 2 means the build succeeded with warnings
 build:
