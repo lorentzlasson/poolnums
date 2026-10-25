@@ -126,7 +126,14 @@ get_response_body = |balls| {
 		\\flex-direction: column;
 		\\align-items: center;
 
-	Str.to_utf8(Html.render(Html.html([], [Html.body([Attribute.style(style)], controls.concat(ball_imgs))])))
+	stylesheet =
+		\\input { display: none; }
+		\\input:checked + img { filter: grayscale(1); opacity: 0.4; }
+
+	head = Html.head([], [Html.element("style", [], [Html.text(stylesheet)])])
+	body = Html.body([Attribute.style(style)], controls.concat(ball_imgs))
+
+	Str.to_utf8(Html.render(Html.html([], [head, body])))
 }
 
 render_controls = |count| {
@@ -164,5 +171,11 @@ render_ball = |ball| {
 		\\max-height: 25vh;
 		\\padding: 10px;
 
-	Html.void_element("img", [Attribute.src(ball.image), Attribute.style(style)])
+	Html.label(
+		[Attribute.style("cursor: pointer;")],
+		[
+			Html.input([Attribute.type("checkbox")]),
+			Html.void_element("img", [Attribute.src(ball.image), Attribute.style(style)]),
+		],
+	)
 }
