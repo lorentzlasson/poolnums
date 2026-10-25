@@ -6,7 +6,7 @@
   };
 
   outputs = { nixpkgs, flake-utils, cloud-cli, ... }:
-    flake-utils.lib.eachSystem [ "x86_64-linux" "aarch64-linux" ] (system:
+    flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs {
           inherit system;
@@ -18,8 +18,10 @@
         rocVersion = "2026-09-29-7f11a82";
 
         rocAssets = {
-          x86_64-linux = { arch = "x86_64"; hash = "sha256-PzkR+Dhss0Vh+fyTodBL8cGooPTEyXhdnwKR3I0Q/RU="; };
-          aarch64-linux = { arch = "arm64"; hash = "sha256-MjD0Qgkv2wds3NYiPxlTlqZ0nuOC4+AOBeeOcxvLjms="; };
+          x86_64-linux = { arch = "linux_x86_64"; hash = "sha256-PzkR+Dhss0Vh+fyTodBL8cGooPTEyXhdnwKR3I0Q/RU="; };
+          aarch64-linux = { arch = "linux_arm64"; hash = "sha256-MjD0Qgkv2wds3NYiPxlTlqZ0nuOC4+AOBeeOcxvLjms="; };
+          aarch64-darwin = { arch = "macos_apple_silicon"; hash = "sha256-84L0sIjLLLID6IDXtXEqngYmBJJcvCKmstg6XfDi2sA="; };
+          x86_64-darwin = { arch = "macos_x86_64"; hash = "sha256-QFGUcyYAO1jmWCah8s17xHF6R+zsgqpxzGcFslEsskg="; };
         };
 
         # the nightly release binary is statically linked, so it runs on NixOS as is
@@ -27,7 +29,7 @@
           pname = "roc";
           version = "nightly-${rocVersion}";
           src = pkgs.fetchurl {
-            url = "https://github.com/roc-lang/nightlies/releases/download/nightly-${rocVersion}/roc_nightly-linux_${rocAssets.${system}.arch}-${rocVersion}.tar.gz";
+            url = "https://github.com/roc-lang/nightlies/releases/download/nightly-${rocVersion}/roc_nightly-${rocAssets.${system}.arch}-${rocVersion}.tar.gz";
             inherit (rocAssets.${system}) hash;
           };
           installPhase = "install -D --mode=755 roc $out/bin/roc";
